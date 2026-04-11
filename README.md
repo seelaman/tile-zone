@@ -155,7 +155,16 @@ Available zone names for `tile-zone.sh`:
 | `left-bot` `right-bot` `center-bot` | | |
 | `maximize` | | |
 
-Or bind via KDE's System Settings > Shortcuts > Custom Shortcuts.
+#### KDE Custom Shortcuts (no kanata needed)
+
+If you don't use kanata, run the included setup script to register Meta+key shortcuts directly in KDE:
+
+```bash
+./setup-kde-shortcuts.sh          # install all shortcuts (Meta+H/J/K/L/W/E/R/...)
+./setup-kde-shortcuts.sh --remove # remove them
+```
+
+Edit the `SHORTCUTS` array at the top of the script to customize key bindings. Shortcuts appear in System Settings > Shortcuts > Custom Shortcuts.
 
 ## Customizing zones
 
