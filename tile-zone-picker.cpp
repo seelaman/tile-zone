@@ -30,7 +30,7 @@
  *   tile-zone-picker
  *
  * Bind to a keyboard shortcut (e.g. RMeta+W via kanata).
- * Requires: tile-zone.sh, kdotool (~/.cargo/bin/kdotool)
+ * Requires: tile-zone.sh, qdbus
  */
 
 #include <cstring>
@@ -350,7 +350,6 @@ public:
 
 private:
     QApplication               *app_;
-    QString                     activeWindowId_;
     std::vector<ScreenOverlay*> overlays_;
     std::vector<ScreenData>     screens_;
     int  activeScr_   = 0;    // screen receiving keyboard input
@@ -369,25 +368,18 @@ private:
         for (auto *ov : overlays_) ov->hide();
         app_->processEvents();
 
-        QString home = QDir::homePath();
-        QString tileCmd = QString("%1/bin/tile-zone.sh --screen %2 %3")
-            .arg(home, screens_[scrIdx].name, QString::number(zone.id));
-        QString cmd;
-        if (!activeWindowId_.isEmpty()) {
-            cmd = QString("%1/.cargo/bin/kdotool windowactivate %2 "
-                          "&& sleep 0.05 && %3")
-                .arg(home, activeWindowId_, tileCmd);
-        } else {
-            cmd = QString("sleep 0.15 && %1").arg(tileCmd);
-        }
+        // KWin auto-restores focus to the previous window when the overlay closes.
+        // A brief delay ensures the focus switch completes before tiling.
+        QString cmd = QString("sleep 0.1 && %1/bin/tile-zone.sh --screen %2 %3")
+            .arg(QDir::homePath(), screens_[scrIdx].name, QString::number(zone.id));
         QProcess::startDetached(QStringLiteral("/bin/bash"),
                                 QStringList{"-c", cmd});
         app_->quit();
     }
 
 public:
-    ZoneController(QApplication *app, const QString &winId)
-        : app_(app), activeWindowId_(winId)
+    ZoneController(QApplication *app, const QString &activeOutput)
+        : app_(app)
     {
         // Sort screens left-to-right, then top-to-bottom
         auto list = app->screens();
@@ -397,20 +389,14 @@ public:
             return a->geometry().y() < b->geometry().y();
         });
 
-        // Detect which screen the active window is on via kdotool,
+        // Find the screen the active window is on (from KWin D-Bus),
         // falling back to cursor position
         QScreen *initialScr = nullptr;
-        if (!winId.isEmpty()) {
-            QProcess proc;
-            proc.start(QDir::homePath() + "/.cargo/bin/kdotool",
-                        {"getwindowgeometry", winId});
-            if (proc.waitForFinished(500) && proc.exitCode() == 0) {
-                QString out = proc.readAllStandardOutput();
-                QRegularExpression re("Position:\\s*(\\d+),(\\d+)");
-                auto m = re.match(out);
-                if (m.hasMatch()) {
-                    QPoint pos(m.captured(1).toInt(), m.captured(2).toInt());
-                    initialScr = QApplication::screenAt(pos);
+        if (!activeOutput.isEmpty()) {
+            for (auto *s : list) {
+                if (s->name() == activeOutput) {
+                    initialScr = s;
+                    break;
                 }
             }
         }
@@ -665,18 +651,18 @@ int main(int argc, char *argv[]) {
 
     QApplication app(argc, argv);
 
-    // Capture active window ID before showing any overlay
-    QString activeWindowId;
+    // Detect which screen the active window is on via KWin D-Bus
+    QString activeOutputName;
     {
         QProcess proc;
-        proc.start(QDir::homePath() + "/.cargo/bin/kdotool",
-                    QStringList{"getactivewindow"});
-        if (proc.waitForFinished(500))
-            activeWindowId = QString::fromUtf8(
+        proc.start(QStringLiteral("qdbus"),
+                    {"org.kde.KWin", "/KWin", "org.kde.KWin.activeOutputName"});
+        if (proc.waitForFinished(500) && proc.exitCode() == 0)
+            activeOutputName = QString::fromUtf8(
                 proc.readAllStandardOutput()).trimmed();
     }
 
-    ZoneController ctrl(&app, activeWindowId);
+    ZoneController ctrl(&app, activeOutputName);
     ctrl.start();
     return app.exec();
 }

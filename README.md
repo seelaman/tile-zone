@@ -81,27 +81,25 @@ tile-zone.sh --screen DP-1 5   # tile zone 5 on a specific screen
 
 ## Installation
 
-### Dependencies
-
-- KDE Plasma 6 (KWin with D-Bus scripting support)
-- Qt6 (Widgets, Gui, Core) — for the picker
-- `edid-decode` — for physical screen size detection
-- `qdbus` — for KWin script injection
-- `kdotool` — for window activation ([github.com/jinliu/kdotool](https://github.com/jinliu/kdotool))
-- Python 3 — for EDID parsing in the shell script
-
-### Build
+### Install dependencies and build
 
 ```bash
-# Build the picker (requires Qt6 development headers)
-make tile-zone-picker
+# Debian/Ubuntu/KDE Neon
+sudo apt install edid-decode qt6-base-dev g++ pkg-config python3 qdbus-qt6
 
-# Or manually:
-g++ -O2 -std=c++17 -o tile-zone-picker tile-zone-picker.cpp \
-    $(pkg-config --cflags --libs Qt6Widgets)
+# Fedora
+sudo dnf install edid-decode qt6-qtbase-devel gcc-c++ pkgconfig python3 qdbus-qt6
+
+# Arch
+sudo pacman -S edid-decode qt6-base python
+
+# Clone and build
+git clone https://github.com/seelaman/tile-zone.git
+cd tile-zone
+make tile-zone-picker
 ```
 
-`tile-zone.sh` is a standalone bash script — no build needed.
+All other dependencies (`qdbus`, `bash`, `python3`) ship with KDE Plasma 6.
 
 ### Setup
 
