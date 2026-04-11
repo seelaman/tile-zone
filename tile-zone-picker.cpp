@@ -60,6 +60,7 @@ struct Zone {
     char key;          // trigger key (lowercase)
     QColor color;      // outline and label color
     QRectF outline;    // outline rectangle (screen-local coordinates)
+    QPointF labelOff{0, 0};  // offset from outline center (to avoid overlap)
 };
 
 // ── Zone colors — one color per shape group ──────────────────────────────
@@ -180,8 +181,8 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     z.push_back({12, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,    fullH, 2*S)});
     z.push_back({13, 'g', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,    fullH, 2*S)});
 
-    // Inset 36: 50% × full-height center — dark green (A)
-    z.push_back({14, 'a', CLR_HALF_FULL_DK, loc(q2X,        topY, center2W, fullH, 3*S)});
+    // Inset 36: 50% × full-height center — dark green (A, shifted right to avoid M)
+    z.push_back({14, 'a', CLR_HALF_FULL_DK, loc(q2X, topY, center2W, fullH, 3*S), {30, 0}});
 
     // Inset 48: 50% × half-height left/right — cyan (W,T,X,B)
     z.push_back({15, 'w', CLR_HALF_HALF,    loc(leftX,      topY, halfW, rowH, 4*S)});
@@ -193,9 +194,9 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     z.push_back({19, 'k', CLR_HALF_HALF_DK, loc(q2X, topY, center2W, rowH, 5*S)});
     z.push_back({20, 'j', CLR_HALF_HALF_DK, loc(q2X, botY, center2W, rowH, 5*S)});
 
-    // Maximize — full available area, white, drawn first (outermost)
+    // Maximize — full available area, white, drawn first (outermost, shifted left to avoid A)
     z.insert(z.begin(), Zone{21, 'm', CLR_MAX,
-        QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), maxW, maxH)});
+        QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), maxW, maxH), {-30, 0}});
 
     return z;
 }
@@ -232,9 +233,9 @@ static std::vector<Zone> buildSmallZones(QRect area, QPoint screenOrigin) {
     std::vector<Zone> z;
     z.reserve(10);
 
-    // Maximize — full available area, white, drawn first
+    // Maximize — full available area, white, drawn first (shifted left to avoid D)
     z.push_back({9, 'm', CLR_MAX,
-        QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), W, H)});
+        QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), W, H), {-30, 0}});
 
     // Vi-style: H=left-26%-full, L=right-26%-full
     // Wide zones spatial: S=left-50%, D=center-48%, F=right-50%
@@ -251,7 +252,7 @@ static std::vector<Zone> buildSmallZones(QRect area, QPoint screenOrigin) {
 
     // Layer 2: Wide zones — green, D dark green (50%/48% × full)
     z.push_back({3, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,   fullH, IW)});
-    z.push_back({4, 'd', CLR_HALF_FULL_DK, loc(centerX,    topY, centerW, fullH, IW)});
+    z.push_back({4, 'd', CLR_HALF_FULL_DK, loc(centerX, topY, centerW, fullH, IW), {30, 0}});
     z.push_back({5, 'f', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,   fullH, IW)});
 
     return z;
@@ -451,7 +452,7 @@ public:
             QString label = QString(QChar(z.key)).toUpper();
             int tw = fm.horizontalAdvance(label);
             int th = fm.height();
-            QPointF ctr = z.outline.center();
+            QPointF ctr = z.outline.center() + z.labelOff;
 
             double pw = tw + 24, ph = th + 12;
             QRectF pill(ctr.x() - pw/2.0, ctr.y() - ph/2.0, pw, ph);
