@@ -8,12 +8,6 @@ Keyboard-driven window tiling zones for KDE Plasma 6. A lightweight alternative 
 
 - **`tile-zone-picker`** — A Qt6 visual overlay that shows all available zones on every connected screen. Type a letter or click to tile instantly. Zone layouts adapt to each monitor's physical size, detected via EDID.
 
-## The picker in action
-
-![tile-zone-picker overlay showing zones across three screens](screenshots/picker-overlay.png)
-
-*The picker overlay on a 3-monitor setup. The 43" main display (right) is active with the full quarter-based zone layout. Two smaller screens (left) show a minimal layout — press their number to switch. Zone colors indicate size: red = quarter-height, orange = quarter-fullheight, cyan = half-width, green = half-fullheight, white = maximize.*
-
 ## How it works
 
 ### Three display size tiers
@@ -33,6 +27,8 @@ Four 25% columns, each available at full height or half height, plus 50% left/ri
   N = maximize
 ```
 
+![Large screen picker — 43" 4K display with quarter-based zones](screenshots/picker-large.png)
+
 #### Medium screens (15"–40") — side-column, 10 zones
 
 26% side columns with 50%/48% wide zones:
@@ -44,11 +40,15 @@ Four 25% columns, each available at full height or half height, plus 50% left/ri
   N = maximize
 ```
 
+![Medium screen picker — side-column layout with 26% columns](screenshots/picker-medium.png)
+
 #### Small screens (< 15") — halves only, 3 zones
 
 ```
   H = left 50%    L = right 50%    N = maximize
 ```
+
+![Small screen picker — minimal left/right/maximize on a 14" laptop display](screenshots/picker-small.png)
 
 ### Multi-screen support
 
