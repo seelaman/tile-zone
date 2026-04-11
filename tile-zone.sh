@@ -233,16 +233,31 @@ cat > "$TMPFILE" <<JSEOF
     } else if (action === "prev") {
         targetZone = (curZone - 1 + curZones.length) % curZones.length;
     } else {
-        // Named zone aliases that resolve per screen size
-        var namedZones = {
-            large:  { 'maximize': 21, 'center-full': 14, 'left-full': 0, 'right-full': 3 },
-            medium: { 'maximize': 9,  'center-full': 4,  'left-full': 2, 'right-full': 6 },
-            small:  { 'maximize': 2,  'center-full': -1, 'left-full': 0, 'right-full': 1 },
+        // Named zone lookup — resolves descriptive names to indices per screen size
+        var zoneNames = {
+            large: {
+                'q1-full': 0, 'q2-full': 1, 'q3-full': 2, 'q4-full': 3,
+                'q1-top': 4,  'q2-top': 5,  'q3-top': 6,  'q4-top': 7,
+                'q1-bot': 8,  'q2-bot': 9,  'q3-bot': 10, 'q4-bot': 11,
+                'left-full': 12,   'right-full': 13,   'center-full': 14,
+                'left-top': 15,    'right-top': 16,
+                'left-bot': 17,    'right-bot': 18,
+                'center-top': 19,  'center-bot': 20,
+                'maximize': 21,
+            },
+            medium: {
+                'left-col-bot': 0,  'left-col-top': 1,  'left-col-full': 2,
+                'left-full': 3,     'center-full': 4,    'right-full': 5,
+                'right-col-full': 6,'right-col-top': 7,  'right-col-bot': 8,
+                'maximize': 9,
+            },
+            small: {
+                'left-full': 0, 'right-full': 1, 'maximize': 2,
+            },
         };
-        var names = namedZones[curSize] || {};
+        var names = zoneNames[curSize] || {};
         if (action in names) {
             targetZone = names[action];
-            if (targetZone < 0) return;
         } else {
             targetZone = parseInt(action);
             if (isNaN(targetZone) || targetZone < 0 || targetZone >= curZones.length) return;
