@@ -31,7 +31,7 @@ Four 25% columns, each available at full height or half height, plus 50% left/ri
 
 #### Medium screens (15"–40") — side-column, 10 zones
 
-26% side columns with 50%/48% wide zones:
+26% side columns with 50%/48% wide zones  (It's 26% so I can see Slack sub-threads):
 
 ```
   W              O         top-half left/right 26%
