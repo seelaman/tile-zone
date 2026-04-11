@@ -12,29 +12,42 @@ Keyboard-driven window tiling zones for KDE Plasma 6. A lightweight alternative 
 
 ![tile-zone-picker overlay showing zones across three screens](screenshots/picker-overlay.png)
 
-*The picker overlay on a 3-monitor setup. The 43" main display (right) is active with the full quarter-based zone layout. Two smaller screens (left) are dimmed — press their number to switch. Zone colors indicate size: red = quarter-height, orange = quarter-fullheight, cyan = half-width, green = half-fullheight.*
+*The picker overlay on a 3-monitor setup. The 43" main display (right) is active with the full quarter-based zone layout. Two smaller screens (left) show a minimal layout — press their number to switch. Zone colors indicate size: red = quarter-height, orange = quarter-fullheight, cyan = half-width, green = half-fullheight, white = maximize.*
 
 ## How it works
 
-### Screen-adaptive zone layouts
+### Three display size tiers
 
-tile-zone detects each monitor's physical diagonal using `edid-decode` and chooses the appropriate layout:
+tile-zone detects each monitor's physical diagonal using `edid-decode` and chooses the appropriate layout. Keys use vi-style HJKL (H=left, L=right, J=down, K=up) with remaining keys finger-aligned to the home row.
 
-**Large screens (>= 40", e.g. 43" 4K)** get a quarter-based layout. Vi-style HJKL for edges and center, remaining keys left-to-right:
+#### Large screens (>= 40") — quarter-based, 22 zones
 
-```
-  Q  W  E  R  T  Y      Q1  L50  Q2  Q3  R50  Q4  (top half)
-  H  S  D  F  G  L      Q1  L50  Q2  Q3  R50  Q4  (full height, vi H/L)
-  Z  X  C  V  B  N      Q1  L50  Q2  Q3  R50  Q4  (bottom half)
-  A = center 50% full   K = center top   J = center bottom
-```
-
-**Standard screens (< 40")** use a simpler side-column layout with 26% side columns and a 48% center:
+Four 25% columns, each available at full height or half height, plus 50% left/right/center zones and maximize. Left hand covers the left side of the screen, right hand covers the right side:
 
 ```
-  Q        Y             top-half left/right 26%
-  H  S D F  L            full-height: left/right 26% (vi H/L), S/D/F = L50/C48/R50
-  Z        N             bottom-half left/right 26%
+  W  E  R  |  U  I  O     Q1  L50  Q2 | Q3  R50  Q4  (top half)
+  H  S  D  |  F  G  L     Q1  L50  Q2 | Q3  R50  Q4  (full height, vi H/L)
+  X  C  V  |  M  ,  .     Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
+
+  A = center 50% full     K = center 50% top     J = center 50% bottom
+  N = maximize
+```
+
+#### Medium screens (15"–40") — side-column, 10 zones
+
+26% side columns with 50%/48% wide zones:
+
+```
+  W              O         top-half left/right 26%
+  H  S  D  F  L            H=left 26%, S=left 50%, D=center 48%, F=right 50%, L=right 26%
+  X              .         bottom-half left/right 26%
+  N = maximize
+```
+
+#### Small screens (< 15") — halves only, 3 zones
+
+```
+  H = left 50%    L = right 50%    N = maximize
 ```
 
 ### Multi-screen support
@@ -49,8 +62,9 @@ The picker shows overlays on all connected screens simultaneously:
 
 ### Visual cues
 
-- **Colors encode zone shape** so you can tell at a glance how big the tile will be: red (small quarter), orange (tall quarter), cyan (wide half), green (large half)
-- **Overlapping zones** are drawn with staggered insets so every outline is distinct
+- **Colors encode zone shape** so you can tell at a glance how big the tile will be: red (small quarter), orange (tall quarter), cyan (wide half), green (large half), white (maximize)
+- **Center zones** (A, K, J on large; D on medium) use darker shades of their group color to distinguish from left/right zones they overlap
+- **Overlapping zones** are drawn with uniform 12px inset steps so every outline is clearly separated
 - **Hover highlight** fills the zone and inverts the label so you can preview before committing
 
 ### Direct tiling script
@@ -115,7 +129,7 @@ Or bind via KDE's System Settings > Shortcuts > Custom Shortcuts.
 
 ## Customizing zones
 
-The zone layouts are defined directly in `tile-zone.sh` (the `zonesForArea` function) and `tile-zone-picker.cpp` (the `buildLargeZones`/`buildSmallZones` functions). Want different proportions, more zones, or a different arrangement? Just ask your friendly LLM to modify them — that's how this project was built in the first place.
+The zone layouts are defined directly in `tile-zone.sh` (the `zonesForArea` function) and `tile-zone-picker.cpp` (the `buildLargeZones`/`buildMediumZones`/`buildSmallZones` functions). Want different proportions, more zones, or a different arrangement? Just ask your friendly LLM to modify them — that's how this project was built in the first place.
 
 ## License
 
