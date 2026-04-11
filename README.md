@@ -20,22 +20,21 @@ Keyboard-driven window tiling zones for KDE Plasma 6. A lightweight alternative 
 
 tile-zone detects each monitor's physical diagonal using `edid-decode` and chooses the appropriate layout:
 
-**Large screens (>= 40", e.g. 43" 4K)** get a quarter-based layout. Keys go left-to-right matching zone positions on screen:
+**Large screens (>= 40", e.g. 43" 4K)** get a quarter-based layout. Vi-style HJKL for edges and center, remaining keys left-to-right:
 
 ```
   Q  W  E  R  T  Y      Q1  L50  Q2  Q3  R50  Q4  (top half)
-  A  S  D  F  G  H      Q1  L50  Q2  Q3  R50  Q4  (full height)
+  H  S  D  F  G  L      Q1  L50  Q2  Q3  R50  Q4  (full height, vi H/L)
   Z  X  C  V  B  N      Q1  L50  Q2  Q3  R50  Q4  (bottom half)
-     J  K  L             center 50%: full, top, bottom
+  A = center 50% full   K = center top   J = center bottom
 ```
 
 **Standard screens (< 40")** use a simpler side-column layout with 26% side columns and a 48% center:
 
 ```
-  Q        Y             Q/Y = top-left/right 26%
-  A        H             A/H = full-height left/right 26%
-  Z        N             Z/N = bottom-left/right 26%
-     J K L               J = left 50%, K = center 48%, L = right 50%
+  Q        Y             top-half left/right 26%
+  H  S D F  L            full-height: left/right 26% (vi H/L), S/D/F = L50/C48/R50
+  Z        N             bottom-half left/right 26%
 ```
 
 ### Multi-screen support

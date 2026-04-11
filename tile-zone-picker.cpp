@@ -6,17 +6,16 @@
  *
  * Adapts to screen resolution:
  *
- * Large screen (4K+, >= 3840px) — keyboard left→right = screen left→right:
+ * Large screen (>= 40") — vi HJKL + spatial left→right:
  *   Q  W  E  R  T  Y    ← Q1  L50  Q2  Q3  R50  Q4  (top half)
- *   A  S  D  F  G  H    ← Q1  L50  Q2  Q3  R50  Q4  (full height)
+ *   H  S  D  F  G  L    ← Q1  L50  Q2  Q3  R50  Q4  (full, vi H=left L=right)
  *   Z  X  C  V  B  N    ← Q1  L50  Q2  Q3  R50  Q4  (bottom half)
- *      J  K  L           ← center 50%: full, top, bottom
+ *   A=C50 full  K=C50 top  J=C50 bottom  (center column)
  *
- * Standard screen (< 3840px):
+ * Standard screen (< 40") — vi H/L + spatial:
  *   Q        Y    ← top-half 26% columns
- *   A        H    ← full-height 26% columns
+ *   H  S D F  L   ← left/right 26% full (vi H/L), S/D/F = L50/C48/R50
  *   Z        N    ← bottom-half 26% columns
- *      J K L      ← wide zones (left 50%, center 48%, right 50%)
  *
  * Build:
  *   make -C ~/bin tile-zone-picker
@@ -149,17 +148,18 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     std::vector<Zone> z;
     z.reserve(21);
 
-    // Keys are assigned so keyboard left→right = screen left→right:
+    // Vi-style HJKL: H=left(Q1-full), L=right(Q4-full), K=up(C50-top), J=down(C50-bot)
+    // Remaining keys keep spatial left→right order per row:
     //   Q  W  E  R  T  Y   →  Q1  L50  Q2  Q3  R50  Q4  (top half)
-    //   A  S  D  F  G  H   →  Q1  L50  Q2  Q3  R50  Q4  (full height)
+    //   H  S  D  F  G  L   →  Q1  L50  Q2  Q3  R50  Q4  (full height, vi H/L)
     //   Z  X  C  V  B  N   →  Q1  L50  Q2  Q3  R50  Q4  (bottom half)
-    //      J  K  L          →  C50-full  C50-top  C50-bot (center)
+    //   A=C50-full  K=C50-top  J=C50-bot (center column)
 
-    // Inset 0: 25% × full-height — orange (A,D,F,H)
-    z.push_back({ 0, 'a', CLR_QTR_FULL, loc(q1X, topY, quarterW,  fullH, 0)});
+    // Inset 0: 25% × full-height — orange (H,D,F,L)
+    z.push_back({ 0, 'h', CLR_QTR_FULL, loc(q1X, topY, quarterW,  fullH, 0)});
     z.push_back({ 1, 'd', CLR_QTR_FULL, loc(q2X, topY, quarterW,  fullH, 0)});
     z.push_back({ 2, 'f', CLR_QTR_FULL, loc(q3X, topY, quarterW,  fullH, 0)});
-    z.push_back({ 3, 'h', CLR_QTR_FULL, loc(q4X, topY, quarter4W, fullH, 0)});
+    z.push_back({ 3, 'l', CLR_QTR_FULL, loc(q4X, topY, quarter4W, fullH, 0)});
 
     // Inset 12: 25% × half-height — red (Q,E,R,Y,Z,C,V,N)
     z.push_back({ 4, 'q', CLR_QTR_HALF, loc(q1X, topY, quarterW,  rowH, S)});
@@ -175,8 +175,8 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     z.push_back({12, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,    fullH, 2*S)});
     z.push_back({13, 'g', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,    fullH, 2*S)});
 
-    // Inset 36: 50% × full-height center — dark green (J)
-    z.push_back({14, 'j', CLR_HALF_FULL_DK, loc(q2X,        topY, center2W, fullH, 3*S)});
+    // Inset 36: 50% × full-height center — dark green (A)
+    z.push_back({14, 'a', CLR_HALF_FULL_DK, loc(q2X,        topY, center2W, fullH, 3*S)});
 
     // Inset 48: 50% × half-height left/right — cyan (W,T,X,B)
     z.push_back({15, 'w', CLR_HALF_HALF,    loc(leftX,      topY, halfW, rowH, 4*S)});
@@ -184,9 +184,9 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     z.push_back({17, 'x', CLR_HALF_HALF,    loc(leftX,      botY, halfW, rowH, 4*S)});
     z.push_back({18, 'b', CLR_HALF_HALF,    loc(halfRightX, botY, halfW, rowH, 4*S)});
 
-    // Inset 60: 50% × half-height center — dark cyan (K,L)
+    // Inset 60: 50% × half-height center — dark cyan (K=top, J=bot)
     z.push_back({19, 'k', CLR_HALF_HALF_DK, loc(q2X, topY, center2W, rowH, 5*S)});
-    z.push_back({20, 'l', CLR_HALF_HALF_DK, loc(q2X, botY, center2W, rowH, 5*S)});
+    z.push_back({20, 'j', CLR_HALF_HALF_DK, loc(q2X, botY, center2W, rowH, 5*S)});
 
     return z;
 }
@@ -223,9 +223,12 @@ static std::vector<Zone> buildSmallZones(QRect area, QPoint screenOrigin) {
     std::vector<Zone> z;
     z.reserve(9);
 
-    // Layer 0: 26% × full-height — orange
-    z.push_back({2, 'a', CLR_QTR_FULL, loc(leftX,  topY, sideW, fullH, IF)});
-    z.push_back({6, 'h', CLR_QTR_FULL, loc(rightX, topY, sideW, fullH, IF)});
+    // Vi-style: H=left-26%-full, L=right-26%-full
+    // Wide zones spatial: S=left-50%, D=center-48%, F=right-50%
+
+    // Layer 0: 26% × full-height — orange (H=left, L=right)
+    z.push_back({2, 'h', CLR_QTR_FULL, loc(leftX,  topY, sideW, fullH, IF)});
+    z.push_back({6, 'l', CLR_QTR_FULL, loc(rightX, topY, sideW, fullH, IF)});
 
     // Layer 1: 26% × half-height — red
     z.push_back({1, 'q', CLR_QTR_HALF, loc(leftX,  topY, sideW, rowH, IH)});
@@ -233,10 +236,10 @@ static std::vector<Zone> buildSmallZones(QRect area, QPoint screenOrigin) {
     z.push_back({7, 'y', CLR_QTR_HALF, loc(rightX, topY, sideW, rowH, IH)});
     z.push_back({8, 'n', CLR_QTR_HALF, loc(rightX, botY, sideW, rowH, IH)});
 
-    // Layer 2: Wide zones — green, K dark green (50%/48% × full)
-    z.push_back({3, 'j', CLR_HALF_FULL,    loc(leftX,      topY, halfW,   fullH, IW)});
-    z.push_back({4, 'k', CLR_HALF_FULL_DK, loc(centerX,    topY, centerW, fullH, IW)});
-    z.push_back({5, 'l', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,   fullH, IW)});
+    // Layer 2: Wide zones — green, D dark green (50%/48% × full)
+    z.push_back({3, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,   fullH, IW)});
+    z.push_back({4, 'd', CLR_HALF_FULL_DK, loc(centerX,    topY, centerW, fullH, IW)});
+    z.push_back({5, 'f', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,   fullH, IW)});
 
     return z;
 }
@@ -588,12 +591,12 @@ int main(int argc, char *argv[]) {
                  "  Shows zone overlay on ALL screens. The cursor's screen\n"
                  "  is active; press a digit to switch screens.\n\n"
                  "  Large screen (>= 40\", via edid-decode):\n"
-                 "    Q..Y = top half, A..H = full height, Z..N = bottom half\n"
-                 "    Each row: Q1, L50, Q2, Q3, R50, Q4 (left to right)\n"
-                 "    J = center 50% full, K = center top, L = center bottom\n\n"
+                 "    Q..Y top, H S D F G L full (vi H/L), Z..N bottom\n"
+                 "    Each row: Q1, L50, Q2, Q3, R50, Q4 left to right\n"
+                 "    A=center full, K=center top, J=center bottom\n\n"
                  "  Standard (< 40\"):\n"
-                 "    Q/Y (top 26%), A/H (full 26%), Z/N (bot 26%)\n"
-                 "    J (left 50%), K (center 48%), L (right 50%)\n\n"
+                 "    Q/Y (top 26%), H/L (full 26%, vi), Z/N (bot 26%)\n"
+                 "    S (left 50%), D (center 48%), F (right 50%)\n\n"
                  "  1-9 = switch screen, Escape/right-click = cancel.");
             return 0;
         }
