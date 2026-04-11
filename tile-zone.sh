@@ -14,41 +14,33 @@
 #
 # Zone layout adapts to physical screen size (via edid-decode):
 #
-# Large screen (>= 40" diagonal) — quarter-based:
-#   0: quarter-1        (25% wide, full height)
-#   1: quarter-2        (25% wide, full height)
-#   2: quarter-3        (25% wide, full height)
-#   3: quarter-4        (25% wide, full height)
-#   4: top-quarter-1    (25% wide, top half)
-#   5: top-quarter-2    (25% wide, top half)
-#   6: top-quarter-3    (25% wide, top half)
-#   7: top-quarter-4    (25% wide, top half)
-#   8: bottom-quarter-1 (25% wide, bottom half)
-#   9: bottom-quarter-2 (25% wide, bottom half)
-#  10: bottom-quarter-3 (25% wide, bottom half)
-#  11: bottom-quarter-4 (25% wide, bottom half)
-#  12: left 50%         (50% wide, full height)
-#  13: right 50%        (50% wide, full height)
-#  14: center 50%       (50% wide, full height, spans Q2+Q3)
-#  15: top-left 50%     (50% wide, top half)
-#  16: top-right 50%    (50% wide, top half)
-#  17: bottom-left 50%  (50% wide, bottom half)
-#  18: bottom-right 50% (50% wide, bottom half)
-#  19: top-center 50%   (50% wide, top half, spans Q2+Q3)
-#  20: bottom-center 50% (50% wide, bottom half, spans Q2+Q3)
-#  21: maximize          (full screen)
+# Large screen (>= 40") — quarter-based:
+#   0-3:   quarter 1-4       (25% wide, full height)
+#   4-7:   top quarter 1-4   (25% wide, top half)
+#   8-11:  bottom quarter 1-4 (25% wide, bottom half)
+#   12-13: left/right 50%    (full height)
+#   14:    center 50%        (full height, spans Q2+Q3)
+#   15-16: top left/right 50%
+#   17-18: bottom left/right 50%
+#   19-20: top/bottom center 50%
+#   21:    maximize
 #
-# Standard screen (< 40" diagonal) — side-column layout:
-#   0: bottom-left  (26% wide, bottom half)
-#   1: top-left     (26% wide, top half)
-#   2: left 26%     (26% wide, full height)
-#   3: left 50%     (50% wide, full height)
-#   4: center 48%   (48% wide, full height)
-#   5: right 50%    (50% wide, full height)
-#   6: right 26%    (26% wide, full height)
-#   7: top-right    (26% wide, top half)
-#   8: bottom-right (26% wide, bottom half)
-#   9: maximize     (full screen)
+# Medium screen (15"–40") — side-column layout:
+#   0: bottom-left  (26%, bottom half)
+#   1: top-left     (26%, top half)
+#   2: left 26%     (full height)
+#   3: left 50%     (full height)
+#   4: center 48%   (full height)
+#   5: right 50%    (full height)
+#   6: right 26%    (full height)
+#   7: top-right    (26%, top half)
+#   8: bottom-right (26%, bottom half)
+#   9: maximize
+#
+# Small screen (< 15") — halves only:
+#   0: left 50%  (full height)
+#   1: right 50% (full height)
+#   2: maximize
 #
 # 10px gap between all zones and screen edges.
 # Screens are ordered spatially (left-to-right, then top-to-bottom).
@@ -56,7 +48,7 @@
 set -euo pipefail
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-    sed -n '2,49s/^# \?//p' "$0"
+    sed -n '2,47s/^# \?//p' "$0"
     exit 0
 fi
 
@@ -103,10 +95,8 @@ cat > "$TMPFILE" <<JSEOF
     var win = workspace.activeWindow;
     if (!win || win.specialWindow) return;
 
-    // Build zone geometries for a given screen area.
-    // isLarge=true: quarter-based (4 x 25% columns + 50% halves)
-    // isLarge=false: side-column (26% sides + 48% center + 50% halves)
-    function zonesForArea(area, isLarge) {
+    // screenSize: 'large' (>= 40"), 'medium' (15"-40"), 'small' (< 15")
+    function zonesForArea(area, screenSize) {
         var ax = area.x, ay = area.y, W = area.width, H = area.height;
         var usable = W - 2 * gap;
         var rowH = Math.round((H - 3 * gap) / 2);
@@ -117,7 +107,7 @@ cat > "$TMPFILE" <<JSEOF
         var halfW = Math.round((usable - gap) / 2);
         var halfRightX = ax + W - gap - halfW;
 
-        if (isLarge) {
+        if (screenSize === 'large') {
             var quarterW = Math.floor((usable - 3 * gap) / 4);
             var quarter4W = usable - 3 * quarterW - 3 * gap;
             var q1X = leftX;
@@ -126,30 +116,30 @@ cat > "$TMPFILE" <<JSEOF
             var q4X = q3X + quarterW + gap;
 
             return [
-                { x: q1X, y: topY, w: quarterW,  h: fullH },  // 0: quarter-1
-                { x: q2X, y: topY, w: quarterW,  h: fullH },  // 1: quarter-2
-                { x: q3X, y: topY, w: quarterW,  h: fullH },  // 2: quarter-3
-                { x: q4X, y: topY, w: quarter4W, h: fullH },  // 3: quarter-4
-                { x: q1X, y: topY, w: quarterW,  h: rowH  },  // 4: top-quarter-1
-                { x: q2X, y: topY, w: quarterW,  h: rowH  },  // 5: top-quarter-2
-                { x: q3X, y: topY, w: quarterW,  h: rowH  },  // 6: top-quarter-3
-                { x: q4X, y: topY, w: quarter4W, h: rowH  },  // 7: top-quarter-4
-                { x: q1X, y: botY, w: quarterW,  h: rowH  },  // 8: bottom-quarter-1
-                { x: q2X, y: botY, w: quarterW,  h: rowH  },  // 9: bottom-quarter-2
-                { x: q3X, y: botY, w: quarterW,  h: rowH  },  // 10: bottom-quarter-3
-                { x: q4X, y: botY, w: quarter4W, h: rowH  },  // 11: bottom-quarter-4
-                { x: leftX,      y: topY, w: halfW, h: fullH },  // 12: left 50%
-                { x: halfRightX, y: topY, w: halfW, h: fullH },  // 13: right 50%
-                { x: q2X, y: topY, w: 2 * quarterW + gap, h: fullH },  // 14: center 50%
-                { x: leftX,      y: topY, w: halfW, h: rowH  },  // 15: top-left 50%
-                { x: halfRightX, y: topY, w: halfW, h: rowH  },  // 16: top-right 50%
-                { x: leftX,      y: botY, w: halfW, h: rowH  },  // 17: bottom-left 50%
-                { x: halfRightX, y: botY, w: halfW, h: rowH  },  // 18: bottom-right 50%
-                { x: q2X, y: topY, w: 2 * quarterW + gap, h: rowH },  // 19: top-center 50%
-                { x: q2X, y: botY, w: 2 * quarterW + gap, h: rowH },  // 20: bottom-center 50%
-                { x: ax, y: ay, w: W, h: H },                        // 21: maximize
+                { x: q1X, y: topY, w: quarterW,  h: fullH },  // 0
+                { x: q2X, y: topY, w: quarterW,  h: fullH },  // 1
+                { x: q3X, y: topY, w: quarterW,  h: fullH },  // 2
+                { x: q4X, y: topY, w: quarter4W, h: fullH },  // 3
+                { x: q1X, y: topY, w: quarterW,  h: rowH  },  // 4
+                { x: q2X, y: topY, w: quarterW,  h: rowH  },  // 5
+                { x: q3X, y: topY, w: quarterW,  h: rowH  },  // 6
+                { x: q4X, y: topY, w: quarter4W, h: rowH  },  // 7
+                { x: q1X, y: botY, w: quarterW,  h: rowH  },  // 8
+                { x: q2X, y: botY, w: quarterW,  h: rowH  },  // 9
+                { x: q3X, y: botY, w: quarterW,  h: rowH  },  // 10
+                { x: q4X, y: botY, w: quarter4W, h: rowH  },  // 11
+                { x: leftX,      y: topY, w: halfW, h: fullH },  // 12
+                { x: halfRightX, y: topY, w: halfW, h: fullH },  // 13
+                { x: q2X, y: topY, w: 2 * quarterW + gap, h: fullH },  // 14
+                { x: leftX,      y: topY, w: halfW, h: rowH  },  // 15
+                { x: halfRightX, y: topY, w: halfW, h: rowH  },  // 16
+                { x: leftX,      y: botY, w: halfW, h: rowH  },  // 17
+                { x: halfRightX, y: botY, w: halfW, h: rowH  },  // 18
+                { x: q2X, y: topY, w: 2 * quarterW + gap, h: rowH },  // 19
+                { x: q2X, y: botY, w: 2 * quarterW + gap, h: rowH },  // 20
+                { x: ax, y: ay, w: W, h: H },  // 21: maximize
             ];
-        } else {
+        } else if (screenSize === 'medium') {
             var sideW = Math.round(usable * 0.26);
             var centerW = usable - 2 * sideW - 2 * gap;
             var rightX = ax + W - gap - sideW;
@@ -165,7 +155,13 @@ cat > "$TMPFILE" <<JSEOF
                 { x: rightX,     y: topY, w: sideW,   h: fullH },  // 6: right 26%
                 { x: rightX,     y: topY, w: sideW,   h: rowH  },  // 7: top-right
                 { x: rightX,     y: botY, w: sideW,   h: rowH  },  // 8: bottom-right
-                { x: ax, y: ay, w: W, h: H },                         // 9: maximize
+                { x: ax, y: ay, w: W, h: H },  // 9: maximize
+            ];
+        } else {
+            return [
+                { x: leftX,      y: topY, w: halfW, h: fullH },  // 0: left 50%
+                { x: halfRightX, y: topY, w: halfW, h: fullH },  // 1: right 50%
+                { x: ax, y: ay, w: W, h: H },  // 2: maximize
             ];
         }
     }
@@ -212,9 +208,11 @@ cat > "$TMPFILE" <<JSEOF
         }
     }
 
-    var isLargeScreen = (screenDiags[tileOutput.name] || 0) >= 40;
+    function sizeClass(d) { return d >= 40 ? 'large' : d >= 15 ? 'medium' : 'small'; }
+
+    var curSize = sizeClass(screenDiags[tileOutput.name] || 0);
     var curArea = workspace.clientArea(KWin.MaximizeArea, tileOutput, win.desktops[0]);
-    var curZones = zonesForArea(curArea, isLargeScreen);
+    var curZones = zonesForArea(curArea, curSize);
     var curZone = detectZone(curZones, win.frameGeometry);
 
     var targetZone = curZone;
@@ -224,9 +222,9 @@ cat > "$TMPFILE" <<JSEOF
         var dir = (action === "screen-next") ? 1 : -1;
         var newIdx = (curScreenIdx + dir + screens.length) % screens.length;
         var targetScreen = screens[newIdx];
-        var targetIsLarge = (screenDiags[targetScreen.name] || 0) >= 40;
+        var targetSize = sizeClass(screenDiags[targetScreen.name] || 0);
         var targetArea = workspace.clientArea(KWin.MaximizeArea, targetScreen, win.desktops[0]);
-        targetZones = zonesForArea(targetArea, targetIsLarge);
+        targetZones = zonesForArea(targetArea, targetSize);
         // Keep same zone index on the new screen (clamped)
         if (targetZone >= targetZones.length)
             targetZone = 0;

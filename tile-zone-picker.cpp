@@ -12,10 +12,13 @@
  *   X  C  V  |  N  ,  .    Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
  *   A=C50 full  K=C50 top  J=C50 bottom  M=maximize
  *
- * Standard screen (< 40") — vi H/L + spatial:
- *   Q        Y    ← top-half 26% columns
+ * Medium screen (15"–40") — vi H/L + spatial:
+ *   W        O    ← top-half 26% columns
  *   H  S D F  L   ← left/right 26% full (vi H/L), S/D/F = L50/C48/R50
- *   Z        N    ← bottom-half 26% columns
+ *   X        .    ← bottom-half 26% columns, N = maximize
+ *
+ * Small screen (< 15") — halves only:
+ *   H = left half, L = right half, N = maximize
  *
  * Build:
  *   make -C ~/bin tile-zone-picker
@@ -79,7 +82,7 @@ static const QColor PILL_BG (  0,   0,   0, 190);
 
 // ── Physical screen size detection via edid-decode ──────────────────────
 
-static const double LARGE_SCREEN_INCHES = 40.0;
+// Screen size thresholds (inches diagonal, via edid-decode)
 
 static double screenDiagonalInches(QScreen *screen) {
     QString name = screen->name();  // e.g. "DP-1"
@@ -200,9 +203,9 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     return z;
 }
 
-// ── Build zones for standard screen — side-column layout ────────────────
+// ── Build zones for medium screen (15"–40") — side-column layout ────────
 
-static std::vector<Zone> buildSmallZones(QRect area, QPoint screenOrigin) {
+static std::vector<Zone> buildMediumZones(QRect area, QPoint screenOrigin) {
     const int gap = 10;
     int ax = area.x(), ay = area.y();
     int W = area.width(), H = area.height();
@@ -229,30 +232,69 @@ static std::vector<Zone> buildSmallZones(QRect area, QPoint screenOrigin) {
 
     const int IF = 0, IH = 14, IW = 30;
 
+    //   W        O         top 26% (finger up from H/L area)
+    //   H  S  D  F  L      full: H=L26, S=L50, D=C48(dark), F=R50, L=R26
+    //   X        .         bottom 26% (finger down)
+    //   N = maximize
+
     std::vector<Zone> z;
     z.reserve(10);
 
-    // Maximize — full available area, white, drawn first (shifted left to avoid D)
+    // Maximize — white, drawn first (shifted left to avoid D)
     z.push_back({9, 'n', CLR_MAX,
         QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), W, H), {-30, 0}});
 
-    // Vi-style: H=left-26%-full, L=right-26%-full
-    // Wide zones spatial: S=left-50%, D=center-48%, F=right-50%
-
-    // Layer 0: 26% × full-height — orange (H=left, L=right)
+    // Layer 0: 26% × full-height — orange (H=left, L=right, vi)
     z.push_back({2, 'h', CLR_QTR_FULL, loc(leftX,  topY, sideW, fullH, IF)});
     z.push_back({6, 'l', CLR_QTR_FULL, loc(rightX, topY, sideW, fullH, IF)});
 
-    // Layer 1: 26% × half-height — red
-    z.push_back({1, 'q', CLR_QTR_HALF, loc(leftX,  topY, sideW, rowH, IH)});
-    z.push_back({0, 'z', CLR_QTR_HALF, loc(leftX,  botY, sideW, rowH, IH)});
-    z.push_back({7, 'y', CLR_QTR_HALF, loc(rightX, topY, sideW, rowH, IH)});
-    z.push_back({8, 'n', CLR_QTR_HALF, loc(rightX, botY, sideW, rowH, IH)});
+    // Layer 1: 26% × half-height — red (W/X left, O/. right)
+    z.push_back({1, 'w', CLR_QTR_HALF, loc(leftX,  topY, sideW, rowH, IH)});
+    z.push_back({0, 'x', CLR_QTR_HALF, loc(leftX,  botY, sideW, rowH, IH)});
+    z.push_back({7, 'o', CLR_QTR_HALF, loc(rightX, topY, sideW, rowH, IH)});
+    z.push_back({8, '.', CLR_QTR_HALF, loc(rightX, botY, sideW, rowH, IH)});
 
-    // Layer 2: Wide zones — green, D dark green (50%/48% × full)
+    // Layer 2: Wide zones — green, D dark green (S=L50, D=C48, F=R50)
     z.push_back({3, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,   fullH, IW)});
     z.push_back({4, 'd', CLR_HALF_FULL_DK, loc(centerX, topY, centerW, fullH, IW), {30, 0}});
     z.push_back({5, 'f', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,   fullH, IW)});
+
+    return z;
+}
+
+// ── Build zones for small screen (< 15") — halves only ──────────────────
+
+static std::vector<Zone> buildSmallZones(QRect area, QPoint screenOrigin) {
+    const int gap = 10;
+    int ax = area.x(), ay = area.y();
+    int W = area.width(), H = area.height();
+    int usable = W - 2 * gap;
+
+    int halfW     = qRound((usable - gap) / 2.0);
+    int fullH     = H - 2 * gap;
+    int leftX     = ax + gap;
+    int halfRightX = ax + W - gap - halfW;
+    int topY      = ay + gap;
+
+    auto loc = [&](int x, int y, int w, int h, int ins) -> QRectF {
+        return QRectF(x - screenOrigin.x() + ins,
+                      y - screenOrigin.y() + ins,
+                      w - 2 * ins, h - 2 * ins);
+    };
+
+    //   H        L      left/right half full (vi H/L)
+    //   N = maximize
+
+    std::vector<Zone> z;
+    z.reserve(3);
+
+    // Maximize — white, drawn first
+    z.push_back({2, 'n', CLR_MAX,
+        QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), W, H), {0, -30}});
+
+    // Left/right halves — green
+    z.push_back({0, 'h', CLR_HALF_FULL, loc(leftX,      topY, halfW, fullH, 12)});
+    z.push_back({1, 'l', CLR_HALF_FULL, loc(halfRightX, topY, halfW, fullH, 12)});
 
     return z;
 }
@@ -377,15 +419,18 @@ public:
         for (int i = 0; i < (int)list.size(); i++) {
             QScreen *s = list[i];
             double diag = screenDiagonalInches(s);
-            bool large = diag >= LARGE_SCREEN_INCHES;
             auto avail  = s->availableGeometry();
             auto origin = s->geometry().topLeft();
 
             ScreenData sd;
             sd.name    = s->name();
             sd.qscreen = s;
-            sd.zones   = large ? buildLargeZones(avail, origin)
-                               : buildSmallZones(avail, origin);
+            if (diag >= 40.0)
+                sd.zones = buildLargeZones(avail, origin);
+            else if (diag >= 15.0)
+                sd.zones = buildMediumZones(avail, origin);
+            else
+                sd.zones = buildSmallZones(avail, origin);
             screens_.push_back(std::move(sd));
 
             if (s == initialScr) activeScr_ = i;
@@ -606,9 +651,10 @@ int main(int argc, char *argv[]) {
                  "  Large screen (>= 40\", via edid-decode):\n"
                  "    W E R | U I O (top), H S D | F G L (full, vi H/L)\n"
                  "    X C V | N , . (bot), A=center, K/J=top/bot, M=max\n\n"
-                 "  Standard (< 40\"):\n"
-                 "    Q/Y (top 26%), H/L (full 26%, vi), Z/N (bot 26%)\n"
-                 "    S (left 50%), D (center 48%), F (right 50%)\n\n"
+                 "  Medium (15\"-40\"):\n"
+                 "    W/O (top 26%), H/L (full 26%, vi), X/. (bot 26%)\n"
+                 "    S (left 50%), D (center 48%), F (right 50%), N=max\n\n"
+                 "  Small (< 15\"): H=left, L=right, N=maximize\n\n"
                  "  1-9 = switch screen, Escape/right-click = cancel.");
             return 0;
         }
