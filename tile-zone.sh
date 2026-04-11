@@ -233,8 +233,20 @@ cat > "$TMPFILE" <<JSEOF
     } else if (action === "prev") {
         targetZone = (curZone - 1 + curZones.length) % curZones.length;
     } else {
-        targetZone = parseInt(action);
-        if (isNaN(targetZone) || targetZone < 0 || targetZone >= curZones.length) return;
+        // Named zone aliases that resolve per screen size
+        var namedZones = {
+            large:  { 'maximize': 21, 'center-full': 14, 'left-full': 0, 'right-full': 3 },
+            medium: { 'maximize': 9,  'center-full': 4,  'left-full': 2, 'right-full': 6 },
+            small:  { 'maximize': 2,  'center-full': -1, 'left-full': 0, 'right-full': 1 },
+        };
+        var names = namedZones[curSize] || {};
+        if (action in names) {
+            targetZone = names[action];
+            if (targetZone < 0) return;
+        } else {
+            targetZone = parseInt(action);
+            if (isNaN(targetZone) || targetZone < 0 || targetZone >= curZones.length) return;
+        }
     }
 
     var tg = targetZones[targetZone];
