@@ -66,14 +66,14 @@ struct Zone {
     QPointF labelOff{0, 0};  // offset from outline center (to avoid overlap)
 };
 
-// ── Zone colors — one color per shape group ──────────────────────────────
-// Center zones (A, H, K) use a darker shade of their group color.
-static const QColor CLR_QTR_HALF    (0xFF, 0x44, 0x44);  // red        — 25% × half  (W,E,R,T,X,C,V,B)
-static const QColor CLR_QTR_FULL    (0xFF, 0xBB, 0x00);  // orange     — 25% × full  (S,D,F,G)
-static const QColor CLR_HALF_HALF   (0x00, 0xCC, 0xFF);  // cyan       — 50% × half  (Q,Y,Z,N)
-static const QColor CLR_HALF_HALF_DK(0x00, 0x77, 0x99);  // dark cyan  — 50% × half center (A,H)
-static const QColor CLR_HALF_FULL   (0x44, 0xFF, 0x44);  // green      — 50% × full  (J,L)
-static const QColor CLR_HALF_FULL_DK(0x22, 0x99, 0x22);  // dark green — 50% × full center (K)
+// ── Zone colors — small to large: red → yellow → blue → green ────────────
+// Innermost (smallest) to outermost (largest). Center zones use darker shades.
+static const QColor CLR_QTR_HALF    (0xFF, 0x44, 0x44);  // red         — 25% × half  (smallest)
+static const QColor CLR_QTR_FULL    (0xFF, 0xDD, 0x00);  // yellow      — 25% × full
+static const QColor CLR_HALF_HALF   (0x44, 0x88, 0xFF);  // blue        — 50% × half
+static const QColor CLR_HALF_HALF_DK(0x22, 0x55, 0xAA);  // dark blue   — 50% × half center (A,H)
+static const QColor CLR_HALF_FULL   (0x44, 0xFF, 0x44);  // green       — 50% × full  (largest)
+static const QColor CLR_HALF_FULL_DK(0x22, 0x99, 0x22);  // dark green  — 50% × full center (K)
 
 static const QColor CLR_MAX      (0xFF, 0xFF, 0xFF);  // white  — maximize (full screen)
 
@@ -157,48 +157,50 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     std::vector<Zone> z;
     z.reserve(22);
 
-    // Vi-style HJKL + finger-aligned rows:
+    // Draw order: outermost (largest) first → innermost (smallest) on top.
+    // green (50% full) → blue (50% half) → yellow (25% full) → red (25% half)
+    //
     //   W  E  R  |  U  I  O   →  Q1  L50  Q2 | Q3  R50  Q4  (top half)
     //   H  S  D  |  F  G  L   →  Q1  L50  Q2 | Q3  R50  Q4  (full, vi H/L)
-    //   X  C  V  |  N  ,  .   →  Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
-    //   A=C50-full  K=C50-top  J=C50-bot  M=maximize
+    //   X  C  V  |  M  ,  .   →  Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
+    //   A=C50-full  K=C50-top  J=C50-bot  N=maximize
 
-    // Inset 0: 25% × full-height — orange (H,D,F,L)
-    z.push_back({ 0, 'h', CLR_QTR_FULL, loc(q1X, topY, quarterW,  fullH, 0)});
-    z.push_back({ 1, 'd', CLR_QTR_FULL, loc(q2X, topY, quarterW,  fullH, 0)});
-    z.push_back({ 2, 'f', CLR_QTR_FULL, loc(q3X, topY, quarterW,  fullH, 0)});
-    z.push_back({ 3, 'l', CLR_QTR_FULL, loc(q4X, topY, quarter4W, fullH, 0)});
-
-    // Inset 12: 25% × half-height — red
-    z.push_back({ 4, 'w', CLR_QTR_HALF, loc(q1X, topY, quarterW,  rowH, S)});
-    z.push_back({ 5, 'r', CLR_QTR_HALF, loc(q2X, topY, quarterW,  rowH, S)});
-    z.push_back({ 6, 'u', CLR_QTR_HALF, loc(q3X, topY, quarterW,  rowH, S)});
-    z.push_back({ 7, 'o', CLR_QTR_HALF, loc(q4X, topY, quarter4W, rowH, S)});
-    z.push_back({ 8, 'x', CLR_QTR_HALF, loc(q1X, botY, quarterW,  rowH, S)});
-    z.push_back({ 9, 'v', CLR_QTR_HALF, loc(q2X, botY, quarterW,  rowH, S)});
-    z.push_back({10, 'm', CLR_QTR_HALF, loc(q3X, botY, quarterW,  rowH, S)});
-    z.push_back({11, '.', CLR_QTR_HALF, loc(q4X, botY, quarter4W, rowH, S)});
-
-    // Inset 24: 50% × full-height left/right — green (S,G)
-    z.push_back({12, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,    fullH, 2*S)});
-    z.push_back({13, 'g', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,    fullH, 2*S)});
-
-    // Inset 36: 50% × full-height center — dark green (A, shifted right to avoid M)
-    z.push_back({14, 'a', CLR_HALF_FULL_DK, loc(q2X, topY, center2W, fullH, 3*S), {30, 0}});
-
-    // Inset 48: 50% × half-height left/right — cyan
-    z.push_back({15, 'e', CLR_HALF_HALF,    loc(leftX,      topY, halfW, rowH, 4*S)});
-    z.push_back({16, 'i', CLR_HALF_HALF,    loc(halfRightX, topY, halfW, rowH, 4*S)});
-    z.push_back({17, 'c', CLR_HALF_HALF,    loc(leftX,      botY, halfW, rowH, 4*S)});
-    z.push_back({18, ',', CLR_HALF_HALF,    loc(halfRightX, botY, halfW, rowH, 4*S)});
-
-    // Inset 60: 50% × half-height center — dark cyan (K=top, J=bot)
-    z.push_back({19, 'k', CLR_HALF_HALF_DK, loc(q2X, topY, center2W, rowH, 5*S)});
-    z.push_back({20, 'j', CLR_HALF_HALF_DK, loc(q2X, botY, center2W, rowH, 5*S)});
-
-    // Maximize — full available area, white, drawn first (outermost, shifted left to avoid A)
-    z.insert(z.begin(), Zone{21, 'n', CLR_MAX,
+    // Maximize — white, outermost (shifted left to avoid A)
+    z.push_back({21, 'n', CLR_MAX,
         QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), maxW, maxH), {-30, 0}});
+
+    // Inset 0: 50% × full-height left/right — green (outermost, largest)
+    z.push_back({12, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,    fullH, 0)});
+    z.push_back({13, 'g', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,    fullH, 0)});
+
+    // Inset 12: 50% × full-height center — dark green (shifted right to avoid N)
+    z.push_back({14, 'a', CLR_HALF_FULL_DK, loc(q2X, topY, center2W, fullH, S), {30, 0}});
+
+    // Inset 24: 50% × half-height left/right — blue
+    z.push_back({15, 'e', CLR_HALF_HALF,    loc(leftX,      topY, halfW, rowH, 2*S)});
+    z.push_back({16, 'i', CLR_HALF_HALF,    loc(halfRightX, topY, halfW, rowH, 2*S)});
+    z.push_back({17, 'c', CLR_HALF_HALF,    loc(leftX,      botY, halfW, rowH, 2*S)});
+    z.push_back({18, ',', CLR_HALF_HALF,    loc(halfRightX, botY, halfW, rowH, 2*S)});
+
+    // Inset 36: 50% × half-height center — dark blue
+    z.push_back({19, 'k', CLR_HALF_HALF_DK, loc(q2X, topY, center2W, rowH, 3*S)});
+    z.push_back({20, 'j', CLR_HALF_HALF_DK, loc(q2X, botY, center2W, rowH, 3*S)});
+
+    // Inset 48: 25% × full-height — yellow
+    z.push_back({ 0, 'h', CLR_QTR_FULL, loc(q1X, topY, quarterW,  fullH, 4*S)});
+    z.push_back({ 1, 'd', CLR_QTR_FULL, loc(q2X, topY, quarterW,  fullH, 4*S)});
+    z.push_back({ 2, 'f', CLR_QTR_FULL, loc(q3X, topY, quarterW,  fullH, 4*S)});
+    z.push_back({ 3, 'l', CLR_QTR_FULL, loc(q4X, topY, quarter4W, fullH, 4*S)});
+
+    // Inset 60: 25% × half-height — red (innermost, smallest)
+    z.push_back({ 4, 'w', CLR_QTR_HALF, loc(q1X, topY, quarterW,  rowH, 5*S)});
+    z.push_back({ 5, 'r', CLR_QTR_HALF, loc(q2X, topY, quarterW,  rowH, 5*S)});
+    z.push_back({ 6, 'u', CLR_QTR_HALF, loc(q3X, topY, quarterW,  rowH, 5*S)});
+    z.push_back({ 7, 'o', CLR_QTR_HALF, loc(q4X, topY, quarter4W, rowH, 5*S)});
+    z.push_back({ 8, 'x', CLR_QTR_HALF, loc(q1X, botY, quarterW,  rowH, 5*S)});
+    z.push_back({ 9, 'v', CLR_QTR_HALF, loc(q2X, botY, quarterW,  rowH, 5*S)});
+    z.push_back({10, 'm', CLR_QTR_HALF, loc(q3X, botY, quarterW,  rowH, 5*S)});
+    z.push_back({11, '.', CLR_QTR_HALF, loc(q4X, botY, quarter4W, rowH, 5*S)});
 
     return z;
 }
@@ -230,34 +232,35 @@ static std::vector<Zone> buildMediumZones(QRect area, QPoint screenOrigin) {
                       w - 2 * ins, h - 2 * ins);
     };
 
-    const int IF = 0, IH = 14, IW = 30;
+    const int S = 14;  // uniform step
 
     //   W        O         top 26% (finger up from H/L area)
     //   H  S  D  F  L      full: H=L26, S=L50, D=C48(dark), F=R50, L=R26
     //   X        .         bottom 26% (finger down)
     //   N = maximize
+    // Draw order: outermost (green) → innermost (red)
 
     std::vector<Zone> z;
     z.reserve(10);
 
-    // Maximize — white, drawn first (shifted left to avoid D)
+    // Maximize — white, outermost (shifted left to avoid D)
     z.push_back({9, 'n', CLR_MAX,
         QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), W, H), {-30, 0}});
 
-    // Layer 0: 26% × full-height — orange (H=left, L=right, vi)
-    z.push_back({2, 'h', CLR_QTR_FULL, loc(leftX,  topY, sideW, fullH, IF)});
-    z.push_back({6, 'l', CLR_QTR_FULL, loc(rightX, topY, sideW, fullH, IF)});
+    // Inset 0: Wide zones — green outermost (S=L50, D=C48, F=R50)
+    z.push_back({3, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,   fullH, 0)});
+    z.push_back({4, 'd', CLR_HALF_FULL_DK, loc(centerX, topY, centerW, fullH, 0), {30, 0}});
+    z.push_back({5, 'f', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,   fullH, 0)});
 
-    // Layer 1: 26% × half-height — red (W/X left, O/. right)
-    z.push_back({1, 'w', CLR_QTR_HALF, loc(leftX,  topY, sideW, rowH, IH)});
-    z.push_back({0, 'x', CLR_QTR_HALF, loc(leftX,  botY, sideW, rowH, IH)});
-    z.push_back({7, 'o', CLR_QTR_HALF, loc(rightX, topY, sideW, rowH, IH)});
-    z.push_back({8, '.', CLR_QTR_HALF, loc(rightX, botY, sideW, rowH, IH)});
+    // Inset 14: 26% × full-height — yellow (H=left, L=right, vi)
+    z.push_back({2, 'h', CLR_QTR_FULL, loc(leftX,  topY, sideW, fullH, S)});
+    z.push_back({6, 'l', CLR_QTR_FULL, loc(rightX, topY, sideW, fullH, S)});
 
-    // Layer 2: Wide zones — green, D dark green (S=L50, D=C48, F=R50)
-    z.push_back({3, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,   fullH, IW)});
-    z.push_back({4, 'd', CLR_HALF_FULL_DK, loc(centerX, topY, centerW, fullH, IW), {30, 0}});
-    z.push_back({5, 'f', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,   fullH, IW)});
+    // Inset 28: 26% × half-height — red innermost (W/X left, O/. right)
+    z.push_back({1, 'w', CLR_QTR_HALF, loc(leftX,  topY, sideW, rowH, 2*S)});
+    z.push_back({0, 'x', CLR_QTR_HALF, loc(leftX,  botY, sideW, rowH, 2*S)});
+    z.push_back({7, 'o', CLR_QTR_HALF, loc(rightX, topY, sideW, rowH, 2*S)});
+    z.push_back({8, '.', CLR_QTR_HALF, loc(rightX, botY, sideW, rowH, 2*S)});
 
     return z;
 }
