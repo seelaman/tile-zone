@@ -36,6 +36,7 @@
 #  18: bottom-right 50% (50% wide, bottom half)
 #  19: top-center 50%   (50% wide, top half, spans Q2+Q3)
 #  20: bottom-center 50% (50% wide, bottom half, spans Q2+Q3)
+#  21: maximize          (full screen)
 #
 # Standard screen (< 40" diagonal) — side-column layout:
 #   0: bottom-left  (26% wide, bottom half)
@@ -47,6 +48,7 @@
 #   6: right 26%    (26% wide, full height)
 #   7: top-right    (26% wide, top half)
 #   8: bottom-right (26% wide, bottom half)
+#   9: maximize     (full screen)
 #
 # 10px gap between all zones and screen edges.
 # Screens are ordered spatially (left-to-right, then top-to-bottom).
@@ -145,6 +147,7 @@ cat > "$TMPFILE" <<JSEOF
                 { x: halfRightX, y: botY, w: halfW, h: rowH  },  // 18: bottom-right 50%
                 { x: q2X, y: topY, w: 2 * quarterW + gap, h: rowH },  // 19: top-center 50%
                 { x: q2X, y: botY, w: 2 * quarterW + gap, h: rowH },  // 20: bottom-center 50%
+                { x: ax, y: ay, w: W, h: H },                        // 21: maximize
             ];
         } else {
             var sideW = Math.round(usable * 0.26);
@@ -162,6 +165,7 @@ cat > "$TMPFILE" <<JSEOF
                 { x: rightX,     y: topY, w: sideW,   h: fullH },  // 6: right 26%
                 { x: rightX,     y: topY, w: sideW,   h: rowH  },  // 7: top-right
                 { x: rightX,     y: botY, w: sideW,   h: rowH  },  // 8: bottom-right
+                { x: ax, y: ay, w: W, h: H },                         // 9: maximize
             ];
         }
     }

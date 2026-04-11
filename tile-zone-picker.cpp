@@ -71,6 +71,8 @@ static const QColor CLR_HALF_HALF_DK(0x00, 0x77, 0x99);  // dark cyan  — 50% �
 static const QColor CLR_HALF_FULL   (0x44, 0xFF, 0x44);  // green      — 50% × full  (J,L)
 static const QColor CLR_HALF_FULL_DK(0x22, 0x99, 0x22);  // dark green — 50% × full center (K)
 
+static const QColor CLR_MAX      (0xFF, 0xFF, 0xFF);  // white  — maximize (full screen)
+
 static const QColor BG_DIM  (  0,   0,   0, 140);
 static const QColor PILL_BG (  0,   0,   0, 190);
 
@@ -145,8 +147,11 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     // stacking inward. Center zones (K, A, H) get their own level.
     const int S = 12;  // uniform step between every pair of adjacent outlines
 
+    // The maximize zone uses the full available area (no gaps)
+    int maxW = W, maxH = H;
+
     std::vector<Zone> z;
-    z.reserve(21);
+    z.reserve(22);
 
     // Vi-style HJKL: H=left(Q1-full), L=right(Q4-full), K=up(C50-top), J=down(C50-bot)
     // Remaining keys keep spatial left→right order per row:
@@ -188,6 +193,10 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     z.push_back({19, 'k', CLR_HALF_HALF_DK, loc(q2X, topY, center2W, rowH, 5*S)});
     z.push_back({20, 'j', CLR_HALF_HALF_DK, loc(q2X, botY, center2W, rowH, 5*S)});
 
+    // Maximize — full available area, white, drawn first (outermost)
+    z.insert(z.begin(), Zone{21, 'm', CLR_MAX,
+        QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), maxW, maxH)});
+
     return z;
 }
 
@@ -221,7 +230,11 @@ static std::vector<Zone> buildSmallZones(QRect area, QPoint screenOrigin) {
     const int IF = 0, IH = 14, IW = 30;
 
     std::vector<Zone> z;
-    z.reserve(9);
+    z.reserve(10);
+
+    // Maximize — full available area, white, drawn first
+    z.push_back({9, 'm', CLR_MAX,
+        QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), W, H)});
 
     // Vi-style: H=left-26%-full, L=right-26%-full
     // Wide zones spatial: S=left-50%, D=center-48%, F=right-50%
