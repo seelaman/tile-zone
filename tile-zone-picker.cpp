@@ -173,7 +173,7 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     z.push_back({ 7, 'o', CLR_QTR_HALF, loc(q4X, topY, quarter4W, rowH, S)});
     z.push_back({ 8, 'x', CLR_QTR_HALF, loc(q1X, botY, quarterW,  rowH, S)});
     z.push_back({ 9, 'v', CLR_QTR_HALF, loc(q2X, botY, quarterW,  rowH, S)});
-    z.push_back({10, 'n', CLR_QTR_HALF, loc(q3X, botY, quarterW,  rowH, S)});
+    z.push_back({10, 'm', CLR_QTR_HALF, loc(q3X, botY, quarterW,  rowH, S)});
     z.push_back({11, '.', CLR_QTR_HALF, loc(q4X, botY, quarter4W, rowH, S)});
 
     // Inset 24: 50% × full-height left/right — green (S,G)
@@ -194,7 +194,7 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     z.push_back({20, 'j', CLR_HALF_HALF_DK, loc(q2X, botY, center2W, rowH, 5*S)});
 
     // Maximize — full available area, white, drawn first (outermost, shifted left to avoid A)
-    z.insert(z.begin(), Zone{21, 'm', CLR_MAX,
+    z.insert(z.begin(), Zone{21, 'n', CLR_MAX,
         QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), maxW, maxH), {-30, 0}});
 
     return z;
@@ -233,7 +233,7 @@ static std::vector<Zone> buildSmallZones(QRect area, QPoint screenOrigin) {
     z.reserve(10);
 
     // Maximize — full available area, white, drawn first (shifted left to avoid D)
-    z.push_back({9, 'm', CLR_MAX,
+    z.push_back({9, 'n', CLR_MAX,
         QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), W, H), {-30, 0}});
 
     // Vi-style: H=left-26%-full, L=right-26%-full
