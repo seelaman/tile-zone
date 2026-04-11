@@ -27,7 +27,7 @@ SHORTCUTS=(
     "tile-zone: Right full (L)|$TILE_ZONE_SH q4-full|Meta+L"
     "tile-zone: Center top (K)|$TILE_ZONE_SH center-top|Meta+K"
     "tile-zone: Center bottom (J)|$TILE_ZONE_SH center-bot|Meta+J"
-    "tile-zone: Center full (A)|$TILE_ZONE_SH center-full|Meta+A"
+    "tile-zone: Center full (G)|$TILE_ZONE_SH center-full|Meta+G"
     "tile-zone: Maximize (N)|$TILE_ZONE_SH maximize|Meta+N"
 
     # Top half — left hand

@@ -120,7 +120,6 @@ Example using [kanata](https://github.com/jtroo/kanata) with cross-hand layers (
   r (cmd bash -c "$HOME/bin/tile-zone.sh q2-top")
   s (cmd bash -c "$HOME/bin/tile-zone.sh left-full")
   d (cmd bash -c "$HOME/bin/tile-zone.sh q2-full")
-  a (cmd bash -c "$HOME/bin/tile-zone.sh center-full")
   g (cmd bash -c "$HOME/bin/tile-zone.sh center-full")
   x (cmd bash -c "$HOME/bin/tile-zone.sh q1-bot")
   c (cmd bash -c "$HOME/bin/tile-zone.sh left-bot")

@@ -10,11 +10,11 @@
  *   W  E  R  |  U  I  O    Q1  L50  Q2 | Q3  R50  Q4  (top half)
  *   H  S  D  |  F  G  L    Q1  L50  Q2 | Q3  R50  Q4  (full, vi H/L)
  *   X  C  V  |  N  ,  .    Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
- *   A=C50 full  K=C50 top  J=C50 bottom  M=maximize
+ *   G=C50 full(dark)  K=C50 top  J=C50 bottom  N=maximize
  *
  * Medium screen (15"–40") — vi H/L + spatial:
  *   W        O    ← top-half 26% columns
- *   H  S D F  L   ← left/right 26% full (vi H/L), S/D/F = L50/C48/R50
+ *   H  S G F  L   ← left/right 26% full (vi H/L), S/G/F = L50/C48/R50
  *   X        .    ← bottom-half 26% columns, N = maximize
  *
  * Small screen (< 15") — halves only:
@@ -163,7 +163,7 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     //   W  E  R  |  U  I  O   →  Q1  L50  Q2 | Q3  R50  Q4  (top half)
     //   H  S  D  |  F  G  L   →  Q1  L50  Q2 | Q3  R50  Q4  (full, vi H/L)
     //   X  C  V  |  M  ,  .   →  Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
-    //   A=C50-full  K=C50-top  J=C50-bot  N=maximize
+    //   G=C50-full(dark)  K=C50-top  J=C50-bot  N=maximize
 
     // Maximize — white, outermost (shifted left to avoid A)
     z.push_back({21, 'n', CLR_MAX,
@@ -174,7 +174,7 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     z.push_back({13, 'g', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,    fullH, 0)});
 
     // Inset 12: 50% × full-height center — dark green (shifted right to avoid N)
-    z.push_back({14, 'a', CLR_HALF_FULL_DK, loc(q2X, topY, center2W, fullH, S), {30, 0}});
+    z.push_back({14, 'g', CLR_HALF_FULL_DK, loc(q2X, topY, center2W, fullH, S), {30, 0}});
 
     // Inset 24: 50% × half-height left/right — blue
     z.push_back({15, 'e', CLR_HALF_HALF,    loc(leftX,      topY, halfW, rowH, 2*S)});
@@ -249,7 +249,7 @@ static std::vector<Zone> buildMediumZones(QRect area, QPoint screenOrigin) {
 
     // Inset 0: Wide zones — green outermost (S=L50, D=C48, F=R50)
     z.push_back({3, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,   fullH, 0)});
-    z.push_back({4, 'd', CLR_HALF_FULL_DK, loc(centerX, topY, centerW, fullH, 0), {30, 0}});
+    z.push_back({4, 'g', CLR_HALF_FULL_DK, loc(centerX, topY, centerW, fullH, 0), {30, 0}});
     z.push_back({5, 'f', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,   fullH, 0)});
 
     // Inset 14: 26% × full-height — yellow (H=left, L=right, vi)
