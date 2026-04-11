@@ -105,23 +105,55 @@ All other dependencies (`qdbus`, `bash`, `python3`) ship with KDE Plasma 6.
 
 1. Copy `tile-zone.sh` and `tile-zone-picker` to a directory in your `$PATH` (e.g. `~/bin/`)
 2. Make sure `tile-zone.sh` is executable: `chmod +x tile-zone.sh`
-3. Bind to keyboard shortcuts. Example using [kanata](https://github.com/jtroo/kanata):
+3. Bind to keyboard shortcuts.
+
+The picker is great for discovering zones, but once you know the layout you can bind `tile-zone.sh` directly for instant tiling without the overlay. Zone names work across all screen sizes — `tile-zone.sh` resolves them to the correct zone for the current display.
+
+Example using [kanata](https://github.com/jtroo/kanata) with cross-hand layers (left modifier → right hand keys, right modifier → left hand keys):
 
 ```lisp
-;; In your kanata layer config:
-;; Hold ; (right meta layer) + W to open the zone picker
+;; Right meta layer (hold ; with right hand, type left-hand keys)
 (deflayermap (rmeta_layer)
-  w (cmd bash -c "$HOME/bin/tile-zone-picker")
+  q (cmd bash -c "$HOME/bin/tile-zone-picker")  ;; visual picker
+  w (cmd bash -c "$HOME/bin/tile-zone.sh q1-top")
+  e (cmd bash -c "$HOME/bin/tile-zone.sh left-top")
+  r (cmd bash -c "$HOME/bin/tile-zone.sh q2-top")
+  s (cmd bash -c "$HOME/bin/tile-zone.sh left-full")
+  d (cmd bash -c "$HOME/bin/tile-zone.sh q2-full")
+  a (cmd bash -c "$HOME/bin/tile-zone.sh center-full")
+  g (cmd bash -c "$HOME/bin/tile-zone.sh center-full")
+  x (cmd bash -c "$HOME/bin/tile-zone.sh q1-bot")
+  c (cmd bash -c "$HOME/bin/tile-zone.sh left-bot")
+  v (cmd bash -c "$HOME/bin/tile-zone.sh q2-bot")
 )
 
-;; Hold A (left meta layer) + H/L to cycle zones
+;; Left meta layer (hold A with left hand, type right-hand keys)
 (deflayermap (lmeta_layer)
-  h (cmd bash -c "$HOME/bin/tile-zone.sh prev")
-  l (cmd bash -c "$HOME/bin/tile-zone.sh next")
-  n (cmd bash -c "$HOME/bin/tile-zone.sh screen-next")
-  p (cmd bash -c "$HOME/bin/tile-zone.sh screen-prev")
+  h (cmd bash -c "$HOME/bin/tile-zone.sh q1-full")      ;; vi left
+  j (cmd bash -c "$HOME/bin/tile-zone.sh center-bot")   ;; vi down
+  k (cmd bash -c "$HOME/bin/tile-zone.sh center-top")   ;; vi up
+  l (cmd bash -c "$HOME/bin/tile-zone.sh q4-full")      ;; vi right
+  u (cmd bash -c "$HOME/bin/tile-zone.sh q3-top")
+  i (cmd bash -c "$HOME/bin/tile-zone.sh right-top")
+  o (cmd bash -c "$HOME/bin/tile-zone.sh q4-top")
+  n (cmd bash -c "$HOME/bin/tile-zone.sh maximize")
+  m (cmd bash -c "$HOME/bin/tile-zone.sh q3-bot")
+  , (cmd bash -c "$HOME/bin/tile-zone.sh right-bot")
+  . (cmd bash -c "$HOME/bin/tile-zone.sh q4-bot")
 )
 ```
+
+Available zone names for `tile-zone.sh`:
+
+| Large (>= 40") | Medium (15"–40") | Small (< 15") |
+|---|---|---|
+| `q1-full` `q2-full` `q3-full` `q4-full` | `left-col-full` `right-col-full` | `left-full` |
+| `q1-top` `q2-top` `q3-top` `q4-top` | `left-col-top` `right-col-top` | `right-full` |
+| `q1-bot` `q2-bot` `q3-bot` `q4-bot` | `left-col-bot` `right-col-bot` | `maximize` |
+| `left-full` `right-full` `center-full` | `left-full` `center-full` `right-full` | |
+| `left-top` `right-top` `center-top` | `maximize` | |
+| `left-bot` `right-bot` `center-bot` | | |
+| `maximize` | | |
 
 Or bind via KDE's System Settings > Shortcuts > Custom Shortcuts.
 
