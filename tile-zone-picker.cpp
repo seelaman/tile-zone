@@ -6,11 +6,11 @@
  *
  * Adapts to screen resolution:
  *
- * Large screen (4K+, >= 3840px):
- *   Q  W  E  R  T  Y    ← Q/Y=top 50% left/right, W-T=top quarters
- *   A  S  D  F  G  H    ← A/H=top/bot center 50%, S-G=full quarters
- *   Z  X  C  V  B  N    ← Z/N=bottom 50% left/right, X-B=bottom quarters
- *      J  K  L           ← J=left 50%, K=center 50%, L=right 50%
+ * Large screen (4K+, >= 3840px) — keyboard left→right = screen left→right:
+ *   Q  W  E  R  T  Y    ← Q1  L50  Q2  Q3  R50  Q4  (top half)
+ *   A  S  D  F  G  H    ← Q1  L50  Q2  Q3  R50  Q4  (full height)
+ *   Z  X  C  V  B  N    ← Q1  L50  Q2  Q3  R50  Q4  (bottom half)
+ *      J  K  L           ← center 50%: full, top, bottom
  *
  * Standard screen (< 3840px):
  *   Q        Y    ← top-half 26% columns
@@ -149,38 +149,44 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     std::vector<Zone> z;
     z.reserve(21);
 
-    // Inset 0: 25% × full-height — orange (S,D,F,G)
-    z.push_back({ 0, 's', CLR_QTR_FULL, loc(q1X, topY, quarterW,  fullH, 0)});
+    // Keys are assigned so keyboard left→right = screen left→right:
+    //   Q  W  E  R  T  Y   →  Q1  L50  Q2  Q3  R50  Q4  (top half)
+    //   A  S  D  F  G  H   →  Q1  L50  Q2  Q3  R50  Q4  (full height)
+    //   Z  X  C  V  B  N   →  Q1  L50  Q2  Q3  R50  Q4  (bottom half)
+    //      J  K  L          →  C50-full  C50-top  C50-bot (center)
+
+    // Inset 0: 25% × full-height — orange (A,D,F,H)
+    z.push_back({ 0, 'a', CLR_QTR_FULL, loc(q1X, topY, quarterW,  fullH, 0)});
     z.push_back({ 1, 'd', CLR_QTR_FULL, loc(q2X, topY, quarterW,  fullH, 0)});
     z.push_back({ 2, 'f', CLR_QTR_FULL, loc(q3X, topY, quarterW,  fullH, 0)});
-    z.push_back({ 3, 'g', CLR_QTR_FULL, loc(q4X, topY, quarter4W, fullH, 0)});
+    z.push_back({ 3, 'h', CLR_QTR_FULL, loc(q4X, topY, quarter4W, fullH, 0)});
 
-    // Inset 12: 25% × half-height — red (W,E,R,T,X,C,V,B)
-    z.push_back({ 4, 'w', CLR_QTR_HALF, loc(q1X, topY, quarterW,  rowH, S)});
+    // Inset 12: 25% × half-height — red (Q,E,R,Y,Z,C,V,N)
+    z.push_back({ 4, 'q', CLR_QTR_HALF, loc(q1X, topY, quarterW,  rowH, S)});
     z.push_back({ 5, 'e', CLR_QTR_HALF, loc(q2X, topY, quarterW,  rowH, S)});
     z.push_back({ 6, 'r', CLR_QTR_HALF, loc(q3X, topY, quarterW,  rowH, S)});
-    z.push_back({ 7, 't', CLR_QTR_HALF, loc(q4X, topY, quarter4W, rowH, S)});
-    z.push_back({ 8, 'x', CLR_QTR_HALF, loc(q1X, botY, quarterW,  rowH, S)});
+    z.push_back({ 7, 'y', CLR_QTR_HALF, loc(q4X, topY, quarter4W, rowH, S)});
+    z.push_back({ 8, 'z', CLR_QTR_HALF, loc(q1X, botY, quarterW,  rowH, S)});
     z.push_back({ 9, 'c', CLR_QTR_HALF, loc(q2X, botY, quarterW,  rowH, S)});
     z.push_back({10, 'v', CLR_QTR_HALF, loc(q3X, botY, quarterW,  rowH, S)});
-    z.push_back({11, 'b', CLR_QTR_HALF, loc(q4X, botY, quarter4W, rowH, S)});
+    z.push_back({11, 'n', CLR_QTR_HALF, loc(q4X, botY, quarter4W, rowH, S)});
 
-    // Inset 24: 50% × full-height left/right — green (J,L)
-    z.push_back({12, 'j', CLR_HALF_FULL,    loc(leftX,      topY, halfW,    fullH, 2*S)});
-    z.push_back({13, 'l', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,    fullH, 2*S)});
+    // Inset 24: 50% × full-height left/right — green (S,G)
+    z.push_back({12, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,    fullH, 2*S)});
+    z.push_back({13, 'g', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,    fullH, 2*S)});
 
-    // Inset 36: 50% × full-height center — dark green (K)
-    z.push_back({14, 'k', CLR_HALF_FULL_DK, loc(q2X,        topY, center2W, fullH, 3*S)});
+    // Inset 36: 50% × full-height center — dark green (J)
+    z.push_back({14, 'j', CLR_HALF_FULL_DK, loc(q2X,        topY, center2W, fullH, 3*S)});
 
-    // Inset 48: 50% × half-height left/right — cyan (Q,Y,Z,N)
-    z.push_back({15, 'q', CLR_HALF_HALF,    loc(leftX,      topY, halfW, rowH, 4*S)});
-    z.push_back({16, 'y', CLR_HALF_HALF,    loc(halfRightX, topY, halfW, rowH, 4*S)});
-    z.push_back({17, 'z', CLR_HALF_HALF,    loc(leftX,      botY, halfW, rowH, 4*S)});
-    z.push_back({18, 'n', CLR_HALF_HALF,    loc(halfRightX, botY, halfW, rowH, 4*S)});
+    // Inset 48: 50% × half-height left/right — cyan (W,T,X,B)
+    z.push_back({15, 'w', CLR_HALF_HALF,    loc(leftX,      topY, halfW, rowH, 4*S)});
+    z.push_back({16, 't', CLR_HALF_HALF,    loc(halfRightX, topY, halfW, rowH, 4*S)});
+    z.push_back({17, 'x', CLR_HALF_HALF,    loc(leftX,      botY, halfW, rowH, 4*S)});
+    z.push_back({18, 'b', CLR_HALF_HALF,    loc(halfRightX, botY, halfW, rowH, 4*S)});
 
-    // Inset 60: 50% × half-height center — dark cyan (A,H)
-    z.push_back({19, 'a', CLR_HALF_HALF_DK, loc(q2X, topY, center2W, rowH, 5*S)});
-    z.push_back({20, 'h', CLR_HALF_HALF_DK, loc(q2X, botY, center2W, rowH, 5*S)});
+    // Inset 60: 50% × half-height center — dark cyan (K,L)
+    z.push_back({19, 'k', CLR_HALF_HALF_DK, loc(q2X, topY, center2W, rowH, 5*S)});
+    z.push_back({20, 'l', CLR_HALF_HALF_DK, loc(q2X, botY, center2W, rowH, 5*S)});
 
     return z;
 }
@@ -582,9 +588,9 @@ int main(int argc, char *argv[]) {
                  "  Shows zone overlay on ALL screens. The cursor's screen\n"
                  "  is active; press a digit to switch screens.\n\n"
                  "  Large screen (>= 40\", via edid-decode):\n"
-                 "    Q/Y (top L/R 50%), A/H (top/bot center 50%)\n"
-                 "    W/E/R/T (top qtr), S/D/F/G (full qtr), X/C/V/B (bot qtr)\n"
-                 "    Z/N (bot L/R 50%), J/K/L (left/center/right 50%)\n\n"
+                 "    Q..Y = top half, A..H = full height, Z..N = bottom half\n"
+                 "    Each row: Q1, L50, Q2, Q3, R50, Q4 (left to right)\n"
+                 "    J = center 50% full, K = center top, L = center bottom\n\n"
                  "  Standard (< 40\"):\n"
                  "    Q/Y (top 26%), A/H (full 26%), Z/N (bot 26%)\n"
                  "    J (left 50%), K (center 48%), L (right 50%)\n\n"
