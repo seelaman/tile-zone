@@ -8,13 +8,13 @@
  *
  * Large screen (>= 40") — vi HJKL + finger-aligned rows:
  *   W  E  R  |  U  I  O    Q1  L50  Q2 | Q3  R50  Q4  (top half)
- *   H  S  D  |  F  G  L    Q1  L50  Q2 | Q3  R50  Q4  (full, vi H/L)
- *   X  C  V  |  N  ,  .    Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
+ *   H  A  S  |  D  F  L    Q1  L50  Q2 | Q3  R50  Q4  (full, vi H/L)
+ *   X  C  V  |  M  ,  .    Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
  *   G=C50 full(dark)  K=C50 top  J=C50 bottom  N=maximize
  *
  * Medium screen (15"–40") — vi H/L + spatial:
  *   W        O    ← top-half 26% columns
- *   H  S G F  L   ← left/right 26% full (vi H/L), S/G/F = L50/C48/R50
+ *   H  A G F  L   ← left/right 26% full (vi H/L), A/G/F = L50/C48/R50
  *   X        .    ← bottom-half 26% columns, N = maximize
  *
  * Small screen (< 15") — halves only:
@@ -161,17 +161,17 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     // green (50% full) → blue (50% half) → yellow (25% full) → red (25% half)
     //
     //   W  E  R  |  U  I  O   →  Q1  L50  Q2 | Q3  R50  Q4  (top half)
-    //   H  S  D  |  F  G  L   →  Q1  L50  Q2 | Q3  R50  Q4  (full, vi H/L)
+    //   H  A  S  |  D  F  L   →  Q1  L50  Q2 | Q3  R50  Q4  (full, vi H/L)
     //   X  C  V  |  M  ,  .   →  Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
     //   G=C50-full(dark)  K=C50-top  J=C50-bot  N=maximize
 
-    // Maximize — white, outermost (shifted left to avoid A)
+    // Maximize — white, outermost (shifted left to avoid G)
     z.push_back({21, 'n', CLR_MAX,
         QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), maxW, maxH), {-30, 0}});
 
     // Inset 0: 50% × full-height left/right — green (outermost, largest)
-    z.push_back({12, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,    fullH, 0)});
-    z.push_back({13, 'g', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,    fullH, 0)});
+    z.push_back({12, 'a', CLR_HALF_FULL,    loc(leftX,      topY, halfW,    fullH, 0)});
+    z.push_back({13, 'f', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,    fullH, 0)});
 
     // Inset 12: 50% × full-height center — dark green (shifted right to avoid N)
     z.push_back({14, 'g', CLR_HALF_FULL_DK, loc(q2X, topY, center2W, fullH, S), {30, 0}});
@@ -188,8 +188,8 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
 
     // Inset 48: 25% × full-height — yellow
     z.push_back({ 0, 'h', CLR_QTR_FULL, loc(q1X, topY, quarterW,  fullH, 4*S)});
-    z.push_back({ 1, 'd', CLR_QTR_FULL, loc(q2X, topY, quarterW,  fullH, 4*S)});
-    z.push_back({ 2, 'f', CLR_QTR_FULL, loc(q3X, topY, quarterW,  fullH, 4*S)});
+    z.push_back({ 1, 's', CLR_QTR_FULL, loc(q2X, topY, quarterW,  fullH, 4*S)});
+    z.push_back({ 2, 'd', CLR_QTR_FULL, loc(q3X, topY, quarterW,  fullH, 4*S)});
     z.push_back({ 3, 'l', CLR_QTR_FULL, loc(q4X, topY, quarter4W, fullH, 4*S)});
 
     // Inset 60: 25% × half-height — red (innermost, smallest)
@@ -247,8 +247,8 @@ static std::vector<Zone> buildMediumZones(QRect area, QPoint screenOrigin) {
     z.push_back({9, 'n', CLR_MAX,
         QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), W, H), {-30, 0}});
 
-    // Inset 0: Wide zones — green outermost (S=L50, D=C48, F=R50)
-    z.push_back({3, 's', CLR_HALF_FULL,    loc(leftX,      topY, halfW,   fullH, 0)});
+    // Inset 0: Wide zones — green outermost (A=L50, G=C48, F=R50)
+    z.push_back({3, 'a', CLR_HALF_FULL,    loc(leftX,      topY, halfW,   fullH, 0)});
     z.push_back({4, 'g', CLR_HALF_FULL_DK, loc(centerX, topY, centerW, fullH, 0), {30, 0}});
     z.push_back({5, 'f', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,   fullH, 0)});
 
@@ -638,11 +638,11 @@ int main(int argc, char *argv[]) {
                  "  Shows zone overlay on ALL screens. The cursor's screen\n"
                  "  is active; press a digit to switch screens.\n\n"
                  "  Large screen (>= 40\", via edid-decode):\n"
-                 "    W E R | U I O (top), H S D | F G L (full, vi H/L)\n"
-                 "    X C V | N , . (bot), A=center, K/J=top/bot, M=max\n\n"
+                 "    W E R | U I O (top), H A S | D F L (full, vi H/L)\n"
+                 "    X C V | M , . (bot), G=center, K/J=top/bot, N=max\n\n"
                  "  Medium (15\"-40\"):\n"
                  "    W/O (top 26%), H/L (full 26%, vi), X/. (bot 26%)\n"
-                 "    S (left 50%), D (center 48%), F (right 50%), N=max\n\n"
+                 "    A (left 50%), G (center 48%), F (right 50%), N=max\n\n"
                  "  Small (< 15\"): H=left, L=right, N=maximize\n\n"
                  "  1-9 = switch screen, Escape/right-click = cancel.");
             return 0;

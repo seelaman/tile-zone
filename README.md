@@ -20,10 +20,10 @@ Four 25% columns, each available at full height or half height, plus 50% left/ri
 
 ```
   W  E  R  |  U  I  O     Q1  L50  Q2 | Q3  R50  Q4  (top half)
-  H  S  D  |  F  G  L     Q1  L50  Q2 | Q3  R50  Q4  (full height, vi H/L)
+  H  A  S  |  D  F  L     Q1  L50  Q2 | Q3  R50  Q4  (full height, vi H/L)
   X  C  V  |  M  ,  .     Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
 
-  A = center 50% full     K = center 50% top     J = center 50% bottom
+  G = center 50% full     K = center 50% top     J = center 50% bottom
   N = maximize
 ```
 
@@ -35,7 +35,7 @@ Four 25% columns, each available at full height or half height, plus 50% left/ri
 
 ```
   W              O         top-half left/right 26%
-  H  S  D  F  L            H=left 26%, S=left 50%, D=center 48%, F=right 50%, L=right 26%
+  H  A  G  F  L            H=left 26%, A=left 50%, G=center 48%, F=right 50%, L=right 26%
   X              .         bottom-half left/right 26%
   N = maximize
 ```
@@ -118,8 +118,9 @@ Example using [kanata](https://github.com/jtroo/kanata) with cross-hand layers (
   w (cmd bash -c "$HOME/bin/tile-zone.sh q1-top")
   e (cmd bash -c "$HOME/bin/tile-zone.sh left-top")
   r (cmd bash -c "$HOME/bin/tile-zone.sh q2-top")
-  s (cmd bash -c "$HOME/bin/tile-zone.sh left-full")
-  d (cmd bash -c "$HOME/bin/tile-zone.sh q2-full")
+  a (cmd bash -c "$HOME/bin/tile-zone.sh left-full")
+  s (cmd bash -c "$HOME/bin/tile-zone.sh q2-full")
+  d (cmd bash -c "$HOME/bin/tile-zone.sh q3-full")
   g (cmd bash -c "$HOME/bin/tile-zone.sh center-full")
   x (cmd bash -c "$HOME/bin/tile-zone.sh q1-bot")
   c (cmd bash -c "$HOME/bin/tile-zone.sh left-bot")
@@ -127,6 +128,7 @@ Example using [kanata](https://github.com/jtroo/kanata) with cross-hand layers (
 )
 
 ;; Left meta layer (hold A with left hand, type right-hand keys)
+;; F: tap=tile right-50% full, hold=meta_shift_layer
 (deflayermap (lmeta_layer)
   h (cmd bash -c "$HOME/bin/tile-zone.sh q1-full")      ;; vi left
   j (cmd bash -c "$HOME/bin/tile-zone.sh center-bot")   ;; vi down

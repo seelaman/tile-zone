@@ -41,10 +41,10 @@ SHORTCUTS=(
     "tile-zone: Q4 top (O)|$TILE_ZONE_SH q4-top|Meta+O"
 
     # Full height
-    "tile-zone: Left-50 full (S)|$TILE_ZONE_SH left-full|Meta+S"
-    "tile-zone: Q2 full (D)|$TILE_ZONE_SH q2-full|Meta+D"
-    "tile-zone: Q3 full (F)|$TILE_ZONE_SH q3-full|Meta+F"
-    "tile-zone: Right-50 full (G)|$TILE_ZONE_SH right-full|Meta+G"
+    "tile-zone: Left-50 full (A)|$TILE_ZONE_SH left-full|Meta+A"
+    "tile-zone: Q2 full (S)|$TILE_ZONE_SH q2-full|Meta+S"
+    "tile-zone: Q3 full (D)|$TILE_ZONE_SH q3-full|Meta+D"
+    "tile-zone: Right-50 full (F)|$TILE_ZONE_SH right-full|Meta+F"
 
     # Bottom half — left hand
     "tile-zone: Q1 bottom (X)|$TILE_ZONE_SH q1-bot|Meta+X"
