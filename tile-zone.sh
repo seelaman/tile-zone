@@ -250,9 +250,26 @@ cat > "$TMPFILE" <<JSEOF
                 'left-full': 3,     'center-full': 4,    'right-full': 5,
                 'right-col-full': 6,'right-col-top': 7,  'right-col-bot': 8,
                 'maximize': 9,
+                // Fallbacks: large-screen zone names degrade to closest medium zone
+                'q1-full': 2, 'q1-top': 1, 'q1-bot': 0,
+                'q2-full': 3, 'q2-top': 3, 'q2-bot': 3,
+                'q3-full': 5, 'q3-top': 5, 'q3-bot': 5,
+                'q4-full': 6, 'q4-top': 7, 'q4-bot': 8,
+                'left-top': 3,  'left-bot': 3,
+                'right-top': 5, 'right-bot': 5,
+                'center-top': 4, 'center-bot': 4,
             },
             small: {
                 'left-full': 0, 'right-full': 1, 'maximize': 2,
+                // Fallbacks: all zone names degrade to left/right/maximize
+                'q1-full': 0, 'q2-full': 0, 'q3-full': 1, 'q4-full': 1,
+                'q1-top': 0,  'q2-top': 0,  'q3-top': 1,  'q4-top': 1,
+                'q1-bot': 0,  'q2-bot': 0,  'q3-bot': 1,  'q4-bot': 1,
+                'left-top': 0,  'left-bot': 0,
+                'right-top': 1, 'right-bot': 1,
+                'center-full': 2, 'center-top': 2, 'center-bot': 2,
+                'left-col-full': 0, 'left-col-top': 0, 'left-col-bot': 0,
+                'right-col-full': 1, 'right-col-top': 1, 'right-col-bot': 1,
             },
         };
         var names = zoneNames[curSize] || {};
