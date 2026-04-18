@@ -4,12 +4,15 @@
  * Shows a fullscreen overlay with colored zone outlines and letter labels.
  * Type a single letter to tile the active window to that zone.
  *
- * 22-zone quarter-based layout — vi HJKL + finger-aligned rows:
- *   W  E  R  |  U  I  O    Q1  L50  Q2 | Q3  R50  Q4  (top half)
- *   A  S        D  F       Q1       Q2 | Q3       Q4  (full-height quarters)
- *   H  (left half full)    L  (right half full)       (vi H/L, spans Q1+Q2 / Q3+Q4)
- *   X  C  V  |  M  ,  .    Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
- *   G=C50 full(dark)  K=C50 top  J=C50 bottom  N=maximize
+ * 22-zone quarter-based layout — left-hand quarter grid + right-hand halves/center:
+ *   Q W E R   q1-top  q2-top  q3-top  q4-top   (top-half quarters)
+ *   A S D F   q1-full q2-full q3-full q4-full  (full-height quarters)
+ *   Z X C V   q1-bot  q2-bot  q3-bot  q4-bot   (bottom-half quarters)
+ *   G = center-full (Q2+Q3, dark green)
+ *   H = left half full,   L = right half full          (vi H/L)
+ *   T = left half top,    I = right half top
+ *   B = left half bottom, , = right half bottom
+ *   K = center top,       J = center bottom,   M = maximize
  *
  * Build:
  *   make -C ~/bin tile-zone-picker
@@ -122,14 +125,17 @@ static std::vector<Zone> buildZones(QRect area, QPoint screenOrigin) {
     // Draw order: outermost (largest) first → innermost (smallest) on top.
     // green (50% full) → blue (50% half) → yellow (25% full) → red (25% half)
     //
-    //   W  E  R  |  U  I  O   →  Q1-top  L50-top  Q2-top | Q3-top R50-top Q4-top
-    //   A  S        D  F      →  Q1      Q2       |       Q3     Q4              (full height)
-    //   H  (left half)  L  (right half)  — vi H/L, spans Q1+Q2 / Q3+Q4
-    //   X  C  V  |  M  ,  .   →  Q1-bot  L50-bot  Q2-bot | Q3-bot R50-bot Q4-bot
-    //   G=C50-full(dark)  K=C50-top  J=C50-bot  N=maximize
+    //   Q W E R → q1-top q2-top q3-top q4-top        (left hand, top-half quarters)
+    //   A S D F → q1-full q2-full q3-full q4-full    (left hand, full-height quarters)
+    //   Z X C V → q1-bot q2-bot q3-bot q4-bot        (left hand, bottom-half quarters)
+    //   G = center-full(dark, spans Q2+Q3)
+    //   H = left-half full,  L = right-half full     (vi H/L)
+    //   T = left-top,  I = right-top                 (half-width × half-height)
+    //   B = left-bot,  , = right-bot
+    //   K = center-top, J = center-bot,  M = maximize
 
     // Maximize — white, outermost (shifted left to avoid G)
-    z.push_back({21, 'n', CLR_MAX,
+    z.push_back({21, 'm', CLR_MAX,
         QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), maxW, maxH), {-30, 0}});
 
     // Inset 0: 50% × full-height left/right — green (outermost, largest)
@@ -140,9 +146,9 @@ static std::vector<Zone> buildZones(QRect area, QPoint screenOrigin) {
     z.push_back({14, 'g', CLR_HALF_FULL_DK, loc(q2X, topY, center2W, fullH, S), {30, 0}});
 
     // Inset 24: 50% × half-height left/right — blue
-    z.push_back({15, 'e', CLR_HALF_HALF,    loc(leftX,      topY, halfW, rowH, 2*S)});
+    z.push_back({15, 't', CLR_HALF_HALF,    loc(leftX,      topY, halfW, rowH, 2*S)});
     z.push_back({16, 'i', CLR_HALF_HALF,    loc(halfRightX, topY, halfW, rowH, 2*S)});
-    z.push_back({17, 'c', CLR_HALF_HALF,    loc(leftX,      botY, halfW, rowH, 2*S)});
+    z.push_back({17, 'b', CLR_HALF_HALF,    loc(leftX,      botY, halfW, rowH, 2*S)});
     z.push_back({18, ',', CLR_HALF_HALF,    loc(halfRightX, botY, halfW, rowH, 2*S)});
 
     // Inset 36: 50% × half-height center — dark blue
@@ -156,14 +162,14 @@ static std::vector<Zone> buildZones(QRect area, QPoint screenOrigin) {
     z.push_back({ 3, 'f', CLR_QTR_FULL, loc(q4X, topY, quarter4W, fullH, 4*S)});
 
     // Inset 60: 25% × half-height — red (innermost, smallest)
-    z.push_back({ 4, 'w', CLR_QTR_HALF, loc(q1X, topY, quarterW,  rowH, 5*S)});
-    z.push_back({ 5, 'r', CLR_QTR_HALF, loc(q2X, topY, quarterW,  rowH, 5*S)});
-    z.push_back({ 6, 'u', CLR_QTR_HALF, loc(q3X, topY, quarterW,  rowH, 5*S)});
-    z.push_back({ 7, 'o', CLR_QTR_HALF, loc(q4X, topY, quarter4W, rowH, 5*S)});
-    z.push_back({ 8, 'x', CLR_QTR_HALF, loc(q1X, botY, quarterW,  rowH, 5*S)});
-    z.push_back({ 9, 'v', CLR_QTR_HALF, loc(q2X, botY, quarterW,  rowH, 5*S)});
-    z.push_back({10, 'm', CLR_QTR_HALF, loc(q3X, botY, quarterW,  rowH, 5*S)});
-    z.push_back({11, '.', CLR_QTR_HALF, loc(q4X, botY, quarter4W, rowH, 5*S)});
+    z.push_back({ 4, 'q', CLR_QTR_HALF, loc(q1X, topY, quarterW,  rowH, 5*S)});
+    z.push_back({ 5, 'w', CLR_QTR_HALF, loc(q2X, topY, quarterW,  rowH, 5*S)});
+    z.push_back({ 6, 'e', CLR_QTR_HALF, loc(q3X, topY, quarterW,  rowH, 5*S)});
+    z.push_back({ 7, 'r', CLR_QTR_HALF, loc(q4X, topY, quarter4W, rowH, 5*S)});
+    z.push_back({ 8, 'z', CLR_QTR_HALF, loc(q1X, botY, quarterW,  rowH, 5*S)});
+    z.push_back({ 9, 'x', CLR_QTR_HALF, loc(q2X, botY, quarterW,  rowH, 5*S)});
+    z.push_back({10, 'c', CLR_QTR_HALF, loc(q3X, botY, quarterW,  rowH, 5*S)});
+    z.push_back({11, 'v', CLR_QTR_HALF, loc(q4X, botY, quarter4W, rowH, 5*S)});
 
     return z;
 }
@@ -605,11 +611,13 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             puts("tile-zone-picker — visual zone picker for window tiling\n"
                  "Usage: tile-zone-picker\n"
-                 "  Shows zone overlay on ALL screens. The cursor's screen\n"
-                 "  is active; press a digit to switch screens.\n\n"
-                 "    W E R | U I O (top), A S | D F (quarters full-height)\n"
-                 "    H = left half full, L = right half full (vi H/L)\n"
-                 "    X C V | M , . (bot), G=center, K/J=top/bot, N=max\n\n"
+                 "  Shows zone overlay on ALL screens. The active window's\n"
+                 "  screen starts active; press a digit to switch screens.\n\n"
+                 "    Q W E R = q1..q4 top,    A S D F = q1..q4 full,\n"
+                 "    Z X C V = q1..q4 bottom, G = center-full\n"
+                 "    H = left half, L = right half (vi H/L)\n"
+                 "    T/I = left/right top,  B/, = left/right bottom\n"
+                 "    K = center-top, J = center-bot,  M = maximize\n\n"
                  "  1-9 = switch screen, Escape/right-click = cancel.");
             return 0;
         }

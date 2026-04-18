@@ -20,41 +20,33 @@ KHOTKEYS_RC="$HOME/.config/khotkeysrc"
 # Adjust key combos to your preference. Uses Qt key syntax.
 SHORTCUTS=(
     # Picker
-    "tile-zone: Picker|$TILE_ZONE_PICKER|Meta+Z"
+    "tile-zone: Picker|$TILE_ZONE_PICKER|Meta+O"
 
-    # Vi navigation — half-width zones + center
+    # Halves + center + maximize (right-hand, vi HJKL)
     "tile-zone: Left-50 full (H)|$TILE_ZONE_SH left-full|Meta+H"
     "tile-zone: Right-50 full (L)|$TILE_ZONE_SH right-full|Meta+L"
     "tile-zone: Center top (K)|$TILE_ZONE_SH center-top|Meta+K"
     "tile-zone: Center bottom (J)|$TILE_ZONE_SH center-bot|Meta+J"
     "tile-zone: Center full (G)|$TILE_ZONE_SH center-full|Meta+G"
-    "tile-zone: Maximize (N)|$TILE_ZONE_SH maximize|Meta+N"
+    "tile-zone: Maximize (M)|$TILE_ZONE_SH maximize|Meta+M"
 
-    # Top half — left hand
-    "tile-zone: Q1 top (W)|$TILE_ZONE_SH q1-top|Meta+W"
-    "tile-zone: Left-50 top (E)|$TILE_ZONE_SH left-top|Meta+E"
-    "tile-zone: Q2 top (R)|$TILE_ZONE_SH q2-top|Meta+R"
+    # Top-half quarters (top row, left hand)
+    "tile-zone: Q1 top (Q)|$TILE_ZONE_SH q1-top|Meta+Q"
+    "tile-zone: Q2 top (W)|$TILE_ZONE_SH q2-top|Meta+W"
+    "tile-zone: Q3 top (E)|$TILE_ZONE_SH q3-top|Meta+E"
+    "tile-zone: Q4 top (R)|$TILE_ZONE_SH q4-top|Meta+R"
 
-    # Top half — right hand
-    "tile-zone: Q3 top (U)|$TILE_ZONE_SH q3-top|Meta+U"
-    "tile-zone: Right-50 top (I)|$TILE_ZONE_SH right-top|Meta+I"
-    "tile-zone: Q4 top (O)|$TILE_ZONE_SH q4-top|Meta+O"
-
-    # Full-height quarters (home row)
+    # Full-height quarters (home row, left hand)
     "tile-zone: Q1 full (A)|$TILE_ZONE_SH q1-full|Meta+A"
     "tile-zone: Q2 full (S)|$TILE_ZONE_SH q2-full|Meta+S"
     "tile-zone: Q3 full (D)|$TILE_ZONE_SH q3-full|Meta+D"
     "tile-zone: Q4 full (F)|$TILE_ZONE_SH q4-full|Meta+F"
 
-    # Bottom half — left hand
-    "tile-zone: Q1 bottom (X)|$TILE_ZONE_SH q1-bot|Meta+X"
-    "tile-zone: Left-50 bottom (C)|$TILE_ZONE_SH left-bot|Meta+C"
-    "tile-zone: Q2 bottom (V)|$TILE_ZONE_SH q2-bot|Meta+V"
-
-    # Bottom half — right hand
-    "tile-zone: Q3 bottom (M)|$TILE_ZONE_SH q3-bot|Meta+M"
-    "tile-zone: Right-50 bottom (,)|$TILE_ZONE_SH right-bot|Meta+,"
-    "tile-zone: Q4 bottom (.)|$TILE_ZONE_SH q4-bot|Meta+."
+    # Bottom-half quarters (bottom row, left hand)
+    "tile-zone: Q1 bottom (Z)|$TILE_ZONE_SH q1-bot|Meta+Z"
+    "tile-zone: Q2 bottom (X)|$TILE_ZONE_SH q2-bot|Meta+X"
+    "tile-zone: Q3 bottom (C)|$TILE_ZONE_SH q3-bot|Meta+C"
+    "tile-zone: Q4 bottom (V)|$TILE_ZONE_SH q4-bot|Meta+V"
 )
 
 GROUP_NAME="tile-zone"

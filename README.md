@@ -12,16 +12,18 @@ Keyboard-driven window tiling zones for KDE Plasma 6. A lightweight alternative 
 
 ### Zone layout — 22 zones, quarter-based
 
-Four 25% columns, each available at full height or half height, plus 50% left/right/center zones and maximize. Keys use vi-style HJKL (H=left half, L=right half, J=down, K=up) with remaining keys finger-aligned to the home row. Left hand covers the left side of the screen, right hand covers the right side:
+Four 25% columns, each available at full height, top half, or bottom half, plus 50% left/right/center zones and maximize. The left hand maps directly to the on-screen quarter grid; the right hand handles halves and center zones using vi-style HJKL:
 
 ```
-  W  E  R  |  U  I  O     Q1  L50  Q2 | Q3  R50  Q4  (top half)
-  A  S        D  F        Q1       Q2 | Q3       Q4  (full-height quarters)
-  H = left half full      L = right half full          (vi H/L)
-  X  C  V  |  M  ,  .     Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
+  Q W E R   q1-top   q2-top   q3-top   q4-top    ← top-half quarters
+  A S D F   q1-full  q2-full  q3-full  q4-full   ← full-height quarters
+  Z X C V   q1-bot   q2-bot   q3-bot   q4-bot    ← bottom-half quarters
 
-  G = center 50% full     K = center 50% top     J = center 50% bottom
-  N = maximize
+  G = center-full (Q2+Q3, dark green)
+  H = left half full   L = right half full        (vi H/L)
+  T = left half top    I = right half top
+  B = left half bot    , = right half bot
+  K = center top       J = center bot    M = maximize
 ```
 
 ![Zone picker overlay showing all 22 zones](screenshots/picker.png)
@@ -85,40 +87,40 @@ All other dependencies (`qdbus`, `bash`) ship with KDE Plasma 6.
 
 The picker is great for discovering zones, but once you know the layout you can bind `tile-zone.sh` directly for instant tiling without the overlay.
 
-Example using [kanata](https://github.com/jtroo/kanata) with cross-hand layers (left modifier → right hand keys, right modifier → left hand keys):
+Example using [kanata](https://github.com/jtroo/kanata) with cross-hand layers — the right-meta layer gives the left hand a full quarter grid, the left-meta layer gives the right hand halves/center/picker:
 
 ```lisp
-;; Right meta layer (hold ; with right hand, type left-hand keys)
+;; Right meta layer (hold ; with right hand, type left-hand keys):
+;;   Q W E R = q1..q4 top, A S D F = q1..q4 full, Z X C V = q1..q4 bottom
 (deflayermap (rmeta_layer)
-  q (cmd bash -c "$HOME/bin/tile-zone-picker")  ;; visual picker
-  w (cmd bash -c "$HOME/bin/tile-zone.sh q1-top")
-  e (cmd bash -c "$HOME/bin/tile-zone.sh left-top")
-  r (cmd bash -c "$HOME/bin/tile-zone.sh q2-top")
+  q (cmd bash -c "$HOME/bin/tile-zone.sh q1-top")
+  w (cmd bash -c "$HOME/bin/tile-zone.sh q2-top")
+  e (cmd bash -c "$HOME/bin/tile-zone.sh q3-top")
+  r (cmd bash -c "$HOME/bin/tile-zone.sh q4-top")
   a (cmd bash -c "$HOME/bin/tile-zone.sh q1-full")
   s (cmd bash -c "$HOME/bin/tile-zone.sh q2-full")
   d (cmd bash -c "$HOME/bin/tile-zone.sh q3-full")
   f (cmd bash -c "$HOME/bin/tile-zone.sh q4-full")
   g (cmd bash -c "$HOME/bin/tile-zone.sh center-full")
-  x (cmd bash -c "$HOME/bin/tile-zone.sh q1-bot")
-  c (cmd bash -c "$HOME/bin/tile-zone.sh left-bot")
-  v (cmd bash -c "$HOME/bin/tile-zone.sh q2-bot")
+  z (cmd bash -c "$HOME/bin/tile-zone.sh q1-bot")
+  x (cmd bash -c "$HOME/bin/tile-zone.sh q2-bot")
+  c (cmd bash -c "$HOME/bin/tile-zone.sh q3-bot")
+  v (cmd bash -c "$HOME/bin/tile-zone.sh q4-bot")
 )
 
-;; Left meta layer (hold A with left hand, type right-hand keys)
+;; Left meta layer (hold A with left hand, type right-hand keys):
+;;   vi HJKL navigation + picker + maximize
 (deflayermap (lmeta_layer)
   h (cmd bash -c "$HOME/bin/tile-zone.sh left-full")    ;; vi left
   j (cmd bash -c "$HOME/bin/tile-zone.sh center-bot")   ;; vi down
   k (cmd bash -c "$HOME/bin/tile-zone.sh center-top")   ;; vi up
   l (cmd bash -c "$HOME/bin/tile-zone.sh right-full")   ;; vi right
-  u (cmd bash -c "$HOME/bin/tile-zone.sh q3-top")
-  i (cmd bash -c "$HOME/bin/tile-zone.sh right-top")
-  o (cmd bash -c "$HOME/bin/tile-zone.sh q4-top")
-  n (cmd bash -c "$HOME/bin/tile-zone.sh maximize")
-  m (cmd bash -c "$HOME/bin/tile-zone.sh q3-bot")
-  , (cmd bash -c "$HOME/bin/tile-zone.sh right-bot")
-  . (cmd bash -c "$HOME/bin/tile-zone.sh q4-bot")
+  o (cmd bash -c "$HOME/bin/tile-zone-picker")          ;; visual picker
+  m (cmd bash -c "$HOME/bin/tile-zone.sh maximize")
 )
 ```
+
+The four half-width × half-height zones (`left-top`, `right-top`, `left-bot`, `right-bot`) aren't bound to dedicated shortcuts — they're reachable via the picker (keys `T`, `I`, `B`, `,`).
 
 Available zone names for `tile-zone.sh`:
 
@@ -133,7 +135,7 @@ Available zone names for `tile-zone.sh`:
 If you don't use kanata, run the included setup script to register Meta+key shortcuts directly in KDE:
 
 ```bash
-./setup-kde-shortcuts.sh          # install all shortcuts (Meta+H/J/K/L/W/E/R/...)
+./setup-kde-shortcuts.sh          # install all shortcuts (Meta+A/S/D/F, Meta+Q/W/E/R, Meta+Z/X/C/V, Meta+H/J/K/L/...)
 ./setup-kde-shortcuts.sh --remove # remove them
 ```
 
