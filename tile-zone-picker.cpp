@@ -4,21 +4,12 @@
  * Shows a fullscreen overlay with colored zone outlines and letter labels.
  * Type a single letter to tile the active window to that zone.
  *
- * Adapts to screen resolution:
- *
- * Large screen (>= 40") — vi HJKL + finger-aligned rows:
+ * 22-zone quarter-based layout — vi HJKL + finger-aligned rows:
  *   W  E  R  |  U  I  O    Q1  L50  Q2 | Q3  R50  Q4  (top half)
- *   H  A  S  |  D  F  L    Q1  L50  Q2 | Q3  R50  Q4  (full, vi H/L)
+ *   A  S        D  F       Q1       Q2 | Q3       Q4  (full-height quarters)
+ *   H  (left half full)    L  (right half full)       (vi H/L, spans Q1+Q2 / Q3+Q4)
  *   X  C  V  |  M  ,  .    Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
  *   G=C50 full(dark)  K=C50 top  J=C50 bottom  N=maximize
- *
- * Medium screen (15"–40") — vi H/L + spatial:
- *   W        O    ← top-half 26% columns
- *   H  A G F  L   ← left/right 26% full (vi H/L), A/G/F = L50/C48/R50
- *   X        .    ← bottom-half 26% columns, N = maximize
- *
- * Small screen (< 15") — halves only:
- *   H = left half, L = right half, N = maximize
  *
  * Build:
  *   make -C ~/bin tile-zone-picker
@@ -32,6 +23,8 @@
  * Bind to a keyboard shortcut (e.g. RMeta+W via kanata).
  * Requires: tile-zone.sh, qdbus
  */
+
+
 
 #include <cstring>
 
@@ -51,7 +44,12 @@
 #include <QColor>
 #include <QPen>
 #include <QMouseEvent>
-#include <QRegularExpression>
+#include <QDBusConnection>
+#include <QDBusVirtualObject>
+#include <QDBusMessage>
+#include <QDBusReply>
+#include <QEventLoop>
+#include <QTemporaryFile>
 
 #include <cmath>
 #include <vector>
@@ -80,45 +78,9 @@ static const QColor CLR_MAX      (0xFF, 0xFF, 0xFF);  // white  — maximize (fu
 static const QColor BG_DIM  (  0,   0,   0, 140);
 static const QColor PILL_BG (  0,   0,   0, 190);
 
-// ── Physical screen size detection via edid-decode ──────────────────────
+// ── Build zones — quarter-based, 22 zones ──────────────────────────────
 
-// Screen size thresholds (inches diagonal, via edid-decode)
-
-static double screenDiagonalInches(QScreen *screen) {
-    QString name = screen->name();  // e.g. "DP-1"
-
-    // Search sysfs for matching EDID
-    QDir drmDir("/sys/class/drm");
-    for (const auto &entry : drmDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
-        // entry = "card1-DP-1" → connector = "DP-1"
-        int dash = entry.indexOf('-');
-        if (dash < 0) continue;
-        QString connector = entry.mid(dash + 1);
-        if (connector != name) continue;
-
-        QString edidPath = drmDir.filePath(entry) + "/edid";
-        QProcess proc;
-        proc.start(QStringLiteral("edid-decode"),
-                    {"--skip-hex-dump", edidPath});
-        if (!proc.waitForFinished(2000)) continue;
-        if (proc.exitCode() != 0) continue;
-
-        QString out = QString::fromUtf8(proc.readAllStandardOutput());
-        QRegularExpression re(
-            "Maximum image size:\\s*(\\d+)\\s*cm\\s*x\\s*(\\d+)\\s*cm");
-        auto match = re.match(out);
-        if (match.hasMatch()) {
-            double w = match.captured(1).toDouble() * 10.0;  // mm
-            double h = match.captured(2).toDouble() * 10.0;
-            return std::sqrt(w * w + h * h) / 25.4;
-        }
-    }
-    return 0.0;  // unknown
-}
-
-// ── Build zones for large screen (4K+) — quarter-based ─────────────────
-
-static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
+static std::vector<Zone> buildZones(QRect area, QPoint screenOrigin) {
     const int gap = 10;
     int ax = area.x(), ay = area.y();
     int W = area.width(), H = area.height();
@@ -160,9 +122,10 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     // Draw order: outermost (largest) first → innermost (smallest) on top.
     // green (50% full) → blue (50% half) → yellow (25% full) → red (25% half)
     //
-    //   W  E  R  |  U  I  O   →  Q1  L50  Q2 | Q3  R50  Q4  (top half)
-    //   H  A  S  |  D  F  L   →  Q1  L50  Q2 | Q3  R50  Q4  (full, vi H/L)
-    //   X  C  V  |  M  ,  .   →  Q1  L50  Q2 | Q3  R50  Q4  (bottom half)
+    //   W  E  R  |  U  I  O   →  Q1-top  L50-top  Q2-top | Q3-top R50-top Q4-top
+    //   A  S        D  F      →  Q1      Q2       |       Q3     Q4              (full height)
+    //   H  (left half)  L  (right half)  — vi H/L, spans Q1+Q2 / Q3+Q4
+    //   X  C  V  |  M  ,  .   →  Q1-bot  L50-bot  Q2-bot | Q3-bot R50-bot Q4-bot
     //   G=C50-full(dark)  K=C50-top  J=C50-bot  N=maximize
 
     // Maximize — white, outermost (shifted left to avoid G)
@@ -170,8 +133,8 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
         QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), maxW, maxH), {-30, 0}});
 
     // Inset 0: 50% × full-height left/right — green (outermost, largest)
-    z.push_back({12, 'a', CLR_HALF_FULL,    loc(leftX,      topY, halfW,    fullH, 0)});
-    z.push_back({13, 'f', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,    fullH, 0)});
+    z.push_back({12, 'h', CLR_HALF_FULL,    loc(leftX,      topY, halfW,    fullH, 0)});
+    z.push_back({13, 'l', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,    fullH, 0)});
 
     // Inset 12: 50% × full-height center — dark green (shifted right to avoid N)
     z.push_back({14, 'g', CLR_HALF_FULL_DK, loc(q2X, topY, center2W, fullH, S), {30, 0}});
@@ -187,10 +150,10 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     z.push_back({20, 'j', CLR_HALF_HALF_DK, loc(q2X, botY, center2W, rowH, 3*S)});
 
     // Inset 48: 25% × full-height — yellow
-    z.push_back({ 0, 'h', CLR_QTR_FULL, loc(q1X, topY, quarterW,  fullH, 4*S)});
+    z.push_back({ 0, 'a', CLR_QTR_FULL, loc(q1X, topY, quarterW,  fullH, 4*S)});
     z.push_back({ 1, 's', CLR_QTR_FULL, loc(q2X, topY, quarterW,  fullH, 4*S)});
     z.push_back({ 2, 'd', CLR_QTR_FULL, loc(q3X, topY, quarterW,  fullH, 4*S)});
-    z.push_back({ 3, 'l', CLR_QTR_FULL, loc(q4X, topY, quarter4W, fullH, 4*S)});
+    z.push_back({ 3, 'f', CLR_QTR_FULL, loc(q4X, topY, quarter4W, fullH, 4*S)});
 
     // Inset 60: 25% × half-height — red (innermost, smallest)
     z.push_back({ 4, 'w', CLR_QTR_HALF, loc(q1X, topY, quarterW,  rowH, 5*S)});
@@ -201,103 +164,6 @@ static std::vector<Zone> buildLargeZones(QRect area, QPoint screenOrigin) {
     z.push_back({ 9, 'v', CLR_QTR_HALF, loc(q2X, botY, quarterW,  rowH, 5*S)});
     z.push_back({10, 'm', CLR_QTR_HALF, loc(q3X, botY, quarterW,  rowH, 5*S)});
     z.push_back({11, '.', CLR_QTR_HALF, loc(q4X, botY, quarter4W, rowH, 5*S)});
-
-    return z;
-}
-
-// ── Build zones for medium screen (15"–40") — side-column layout ────────
-
-static std::vector<Zone> buildMediumZones(QRect area, QPoint screenOrigin) {
-    const int gap = 10;
-    int ax = area.x(), ay = area.y();
-    int W = area.width(), H = area.height();
-    int usable = W - 2 * gap;
-
-    int sideW   = qRound(usable * 0.26);
-    int halfW   = qRound((usable - gap) / 2.0);
-    int centerW = usable - 2 * sideW - 2 * gap;
-    int rowH  = qRound((H - 3 * gap) / 2.0);
-    int fullH = rowH * 2 + gap;
-
-    int leftX      = ax + gap;
-    int rightX     = ax + W - gap - sideW;
-    int halfRightX = ax + W - gap - halfW;
-    int centerX    = leftX + sideW + gap;
-    int topY = ay + gap;
-    int botY = topY + rowH + gap;
-
-    auto loc = [&](int x, int y, int w, int h, int ins) -> QRectF {
-        return QRectF(x - screenOrigin.x() + ins,
-                      y - screenOrigin.y() + ins,
-                      w - 2 * ins, h - 2 * ins);
-    };
-
-    const int S = 14;  // uniform step
-
-    //   W        O         top 26% (finger up from H/L area)
-    //   H  S  D  F  L      full: H=L26, S=L50, D=C48(dark), F=R50, L=R26
-    //   X        .         bottom 26% (finger down)
-    //   N = maximize
-    // Draw order: outermost (green) → innermost (red)
-
-    std::vector<Zone> z;
-    z.reserve(10);
-
-    // Maximize — white, outermost (shifted left to avoid D)
-    z.push_back({9, 'n', CLR_MAX,
-        QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), W, H), {-30, 0}});
-
-    // Inset 0: Wide zones — green outermost (A=L50, G=C48, F=R50)
-    z.push_back({3, 'a', CLR_HALF_FULL,    loc(leftX,      topY, halfW,   fullH, 0)});
-    z.push_back({4, 'g', CLR_HALF_FULL_DK, loc(centerX, topY, centerW, fullH, 0), {30, 0}});
-    z.push_back({5, 'f', CLR_HALF_FULL,    loc(halfRightX, topY, halfW,   fullH, 0)});
-
-    // Inset 14: 26% × full-height — yellow (H=left, L=right, vi)
-    z.push_back({2, 'h', CLR_QTR_FULL, loc(leftX,  topY, sideW, fullH, S)});
-    z.push_back({6, 'l', CLR_QTR_FULL, loc(rightX, topY, sideW, fullH, S)});
-
-    // Inset 28: 26% × half-height — red innermost (W/X left, O/. right)
-    z.push_back({1, 'w', CLR_QTR_HALF, loc(leftX,  topY, sideW, rowH, 2*S)});
-    z.push_back({0, 'x', CLR_QTR_HALF, loc(leftX,  botY, sideW, rowH, 2*S)});
-    z.push_back({7, 'o', CLR_QTR_HALF, loc(rightX, topY, sideW, rowH, 2*S)});
-    z.push_back({8, '.', CLR_QTR_HALF, loc(rightX, botY, sideW, rowH, 2*S)});
-
-    return z;
-}
-
-// ── Build zones for small screen (< 15") — halves only ──────────────────
-
-static std::vector<Zone> buildSmallZones(QRect area, QPoint screenOrigin) {
-    const int gap = 10;
-    int ax = area.x(), ay = area.y();
-    int W = area.width(), H = area.height();
-    int usable = W - 2 * gap;
-
-    int halfW     = qRound((usable - gap) / 2.0);
-    int fullH     = H - 2 * gap;
-    int leftX     = ax + gap;
-    int halfRightX = ax + W - gap - halfW;
-    int topY      = ay + gap;
-
-    auto loc = [&](int x, int y, int w, int h, int ins) -> QRectF {
-        return QRectF(x - screenOrigin.x() + ins,
-                      y - screenOrigin.y() + ins,
-                      w - 2 * ins, h - 2 * ins);
-    };
-
-    //   H        L      left/right half full (vi H/L)
-    //   N = maximize
-
-    std::vector<Zone> z;
-    z.reserve(3);
-
-    // Maximize — white, drawn first
-    z.push_back({2, 'n', CLR_MAX,
-        QRectF(ax - screenOrigin.x(), ay - screenOrigin.y(), W, H), {0, -30}});
-
-    // Left/right halves — green
-    z.push_back({0, 'h', CLR_HALF_FULL, loc(leftX,      topY, halfW, fullH, 12)});
-    z.push_back({1, 'l', CLR_HALF_FULL, loc(halfRightX, topY, halfW, fullH, 12)});
 
     return z;
 }
@@ -338,6 +204,107 @@ protected:
     void mousePressEvent(QMouseEvent *ev) override;
 };
 
+// ── Capture the currently-active window's UUID + output from KWin ──────
+//
+// We want to tile whichever window the user had focused when they invoked the
+// picker — not whatever `workspace.activeWindow` happens to be later (the
+// picker overlays steal focus, especially when switching screens). We also
+// need that window's output name to decide which screen the picker should
+// start "active" on — relying on KWin's activeOutputName picks up the cursor
+// instead on some setups. We do both by briefly registering a DBus service
+// and running a one-shot KWin script that calls back with both values.
+
+struct ActiveWindow {
+    QString uuid;
+    QString output;
+};
+
+class ActiveWindowCapture : public QDBusVirtualObject {
+public:
+    ActiveWindow result;
+    QEventLoop *loop = nullptr;
+
+    QString introspect(const QString &) const override { return QString(); }
+
+    bool handleMessage(const QDBusMessage &msg,
+                       const QDBusConnection &conn) override {
+        if (msg.member() == QLatin1String("SetActiveWindow")
+            && msg.arguments().size() >= 2) {
+            result.uuid   = msg.arguments().at(0).toString();
+            result.output = msg.arguments().at(1).toString();
+            conn.send(msg.createReply());
+            if (loop) loop->quit();
+            return true;
+        }
+        return false;
+    }
+};
+
+static ActiveWindow captureActiveWindow() {
+    auto bus = QDBusConnection::sessionBus();
+    if (!bus.isConnected()) return {};
+
+    const QString service = QStringLiteral("org.tilezone.Picker");
+    const QString path    = QStringLiteral("/ActiveWindow");
+
+    if (!bus.registerService(service)) return {};
+
+    ActiveWindowCapture svc;
+    if (!bus.registerVirtualObject(path, &svc)) {
+        bus.unregisterService(service);
+        return {};
+    }
+
+    QTemporaryFile f(QDir::tempPath() + "/tile-zone-picker-XXXXXX.js");
+    f.setAutoRemove(true);
+    if (!f.open()) {
+        bus.unregisterObject(path);
+        bus.unregisterService(service);
+        return {};
+    }
+    f.write(
+        "(function() {\n"
+        "  var w = workspace.activeWindow;\n"
+        "  var id  = w ? String(w.internalId) : '';\n"
+        "  var out = (w && w.output) ? String(w.output.name) : '';\n"
+        "  callDBus('org.tilezone.Picker', '/ActiveWindow',\n"
+        "           'org.tilezone.Picker', 'SetActiveWindow', id, out);\n"
+        "})();\n");
+    f.flush();
+
+    const QString plugin = QStringLiteral("tile-zone-picker-%1")
+                               .arg(QCoreApplication::applicationPid());
+
+    auto load = QDBusMessage::createMethodCall(
+        "org.kde.KWin", "/Scripting",
+        "org.kde.kwin.Scripting", "loadScript");
+    load << f.fileName() << plugin;
+    QDBusReply<int> scriptId = bus.call(load);
+    if (scriptId.isValid()) {
+        auto run = QDBusMessage::createMethodCall(
+            "org.kde.KWin",
+            QStringLiteral("/Scripting/Script%1").arg(scriptId.value()),
+            "org.kde.kwin.Script", "run");
+        bus.call(run);
+
+        QEventLoop loop;
+        svc.loop = &loop;
+        QTimer::singleShot(800, &loop, &QEventLoop::quit);
+        loop.exec();
+        svc.loop = nullptr;
+    }
+
+    auto unload = QDBusMessage::createMethodCall(
+        "org.kde.KWin", "/Scripting",
+        "org.kde.kwin.Scripting", "unloadScript");
+    unload << plugin;
+    bus.call(unload);
+
+    bus.unregisterObject(path);
+    bus.unregisterService(service);
+    return svc.result;
+}
+
 // ── Controller (manages all screens) ────────────────────────────────────
 
 class ZoneController {
@@ -352,6 +319,7 @@ private:
     QApplication               *app_;
     std::vector<ScreenOverlay*> overlays_;
     std::vector<ScreenData>     screens_;
+    QString activeWinId_;     // UUID captured at startup (may be empty)
     int  activeScr_   = 0;    // screen receiving keyboard input
     int  hoveredScr_  = -1;   // screen the mouse is on
     int  hoveredZone_ = -1;   // zone index within hoveredScr_
@@ -368,18 +336,29 @@ private:
         for (auto *ov : overlays_) ov->hide();
         app_->processEvents();
 
-        // KWin auto-restores focus to the previous window when the overlay closes.
-        // A brief delay ensures the focus switch completes before tiling.
-        QString cmd = QString("sleep 0.1 && %1/bin/tile-zone.sh --screen %2 %3")
-            .arg(QDir::homePath(), screens_[scrIdx].name, QString::number(zone.id));
+        QString cmd;
+        if (!activeWinId_.isEmpty()) {
+            // Target the window we captured at picker startup — focus races
+            // from switching overlays between screens can't misdirect us.
+            cmd = QString("%1/bin/tile-zone.sh --screen %2 --window '%3' %4")
+                .arg(QDir::homePath(), screens_[scrIdx].name,
+                     activeWinId_, QString::number(zone.id));
+        } else {
+            // Fallback: let tile-zone.sh use workspace.activeWindow (the
+            // 0.1s sleep gives KWin time to restore focus after overlay close).
+            cmd = QString("sleep 0.1 && %1/bin/tile-zone.sh --screen %2 %3")
+                .arg(QDir::homePath(), screens_[scrIdx].name,
+                     QString::number(zone.id));
+        }
         QProcess::startDetached(QStringLiteral("/bin/bash"),
                                 QStringList{"-c", cmd});
         app_->quit();
     }
 
 public:
-    ZoneController(QApplication *app, const QString &activeOutput)
-        : app_(app)
+    ZoneController(QApplication *app, const QString &activeOutput,
+                   const QString &activeWinId)
+        : app_(app), activeWinId_(activeWinId)
     {
         // Sort screens left-to-right, then top-to-bottom
         auto list = app->screens();
@@ -389,8 +368,8 @@ public:
             return a->geometry().y() < b->geometry().y();
         });
 
-        // Find the screen the active window is on (from KWin D-Bus),
-        // falling back to cursor position
+        // The initially-active screen follows the active window's output —
+        // not the mouse cursor. Fall back to primary only if capture failed.
         QScreen *initialScr = nullptr;
         if (!activeOutput.isEmpty()) {
             for (auto *s : list) {
@@ -400,26 +379,17 @@ public:
                 }
             }
         }
-        if (!initialScr) {
-            initialScr = QApplication::screenAt(QCursor::pos());
-            if (!initialScr) initialScr = app->primaryScreen();
-        }
+        if (!initialScr) initialScr = app->primaryScreen();
 
         for (int i = 0; i < (int)list.size(); i++) {
             QScreen *s = list[i];
-            double diag = screenDiagonalInches(s);
             auto avail  = s->availableGeometry();
             auto origin = s->geometry().topLeft();
 
             ScreenData sd;
             sd.name    = s->name();
             sd.qscreen = s;
-            if (diag >= 40.0)
-                sd.zones = buildLargeZones(avail, origin);
-            else if (diag >= 15.0)
-                sd.zones = buildMediumZones(avail, origin);
-            else
-                sd.zones = buildSmallZones(avail, origin);
+            sd.zones   = buildZones(avail, origin);
             screens_.push_back(std::move(sd));
 
             if (s == initialScr) activeScr_ = i;
@@ -637,13 +607,9 @@ int main(int argc, char *argv[]) {
                  "Usage: tile-zone-picker\n"
                  "  Shows zone overlay on ALL screens. The cursor's screen\n"
                  "  is active; press a digit to switch screens.\n\n"
-                 "  Large screen (>= 40\", via edid-decode):\n"
-                 "    W E R | U I O (top), H A S | D F L (full, vi H/L)\n"
+                 "    W E R | U I O (top), A S | D F (quarters full-height)\n"
+                 "    H = left half full, L = right half full (vi H/L)\n"
                  "    X C V | M , . (bot), G=center, K/J=top/bot, N=max\n\n"
-                 "  Medium (15\"-40\"):\n"
-                 "    W/O (top 26%), H/L (full 26%, vi), X/. (bot 26%)\n"
-                 "    A (left 50%), G (center 48%), F (right 50%), N=max\n\n"
-                 "  Small (< 15\"): H=left, L=right, N=maximize\n\n"
                  "  1-9 = switch screen, Escape/right-click = cancel.");
             return 0;
         }
@@ -651,18 +617,13 @@ int main(int argc, char *argv[]) {
 
     QApplication app(argc, argv);
 
-    // Detect which screen the active window is on via KWin D-Bus
-    QString activeOutputName;
-    {
-        QProcess proc;
-        proc.start(QStringLiteral("qdbus"),
-                    {"org.kde.KWin", "/KWin", "org.kde.KWin.activeOutputName"});
-        if (proc.waitForFinished(500) && proc.exitCode() == 0)
-            activeOutputName = QString::fromUtf8(
-                proc.readAllStandardOutput()).trimmed();
-    }
+    // Capture the active window's UUID and output name before any overlays
+    // appear. UUID survives focus races when tiling; output name decides
+    // which screen the picker starts "active" on (based on the active
+    // window, not the mouse cursor).
+    ActiveWindow aw = captureActiveWindow();
 
-    ZoneController ctrl(&app, activeOutputName);
+    ZoneController ctrl(&app, aw.output, aw.uuid);
     ctrl.start();
     return app.exec();
 }

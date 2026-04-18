@@ -12,9 +12,7 @@
 #   screen-next     — move window to same zone on next screen
 #   screen-prev     — move window to same zone on previous screen
 #
-# Zone layout adapts to physical screen size (via edid-decode):
-#
-# Large screen (>= 40") — quarter-based:
+# Zone layout — quarter-based, 22 zones:
 #   0-3:   quarter 1-4       (25% wide, full height)
 #   4-7:   top quarter 1-4   (25% wide, top half)
 #   8-11:  bottom quarter 1-4 (25% wide, bottom half)
@@ -24,23 +22,6 @@
 #   17-18: bottom left/right 50%
 #   19-20: top/bottom center 50%
 #   21:    maximize
-#
-# Medium screen (15"–40") — side-column layout:
-#   0: bottom-left  (26%, bottom half)
-#   1: top-left     (26%, top half)
-#   2: left 26%     (full height)
-#   3: left 50%     (full height)
-#   4: center 48%   (full height)
-#   5: right 50%    (full height)
-#   6: right 26%    (full height)
-#   7: top-right    (26%, top half)
-#   8: bottom-right (26%, bottom half)
-#   9: maximize
-#
-# Small screen (< 15") — halves only:
-#   0: left 50%  (full height)
-#   1: right 50% (full height)
-#   2: maximize
 #
 # 10px gap between all zones and screen edges.
 # Screens are ordered spatially (left-to-right, then top-to-bottom).
@@ -54,32 +35,16 @@ fi
 
 ACTION="next"
 TARGET_SCREEN=""
+TARGET_WINDOW=""
 GAP=10
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --screen) TARGET_SCREEN="$2"; shift 2 ;;
+        --window) TARGET_WINDOW="$2"; shift 2 ;;
         *) ACTION="$1"; shift ;;
     esac
 done
-
-# Detect physical screen diagonals via edid-decode (connector → inches)
-SCREEN_DIAGS=$(python3 -c "
-import subprocess, glob, os, re, math, json
-diags = {}
-for p in sorted(glob.glob('/sys/class/drm/card*-*/edid')):
-    conn = os.path.basename(os.path.dirname(p)).split('-', 1)[1]
-    try:
-        r = subprocess.run(['edid-decode', '--skip-hex-dump', p],
-                           capture_output=True, text=True, timeout=2)
-        if r.returncode != 0: continue
-        m = re.search(r'Maximum image size:\s*(\d+)\s*cm\s*x\s*(\d+)\s*cm', r.stdout)
-        if m:
-            w, h = int(m.group(1)) * 10, int(m.group(2)) * 10
-            diags[conn] = round(math.sqrt(w*w + h*h) / 25.4, 1)
-    except Exception: pass
-print(json.dumps(diags))
-" 2>/dev/null || echo '{}')
 
 PLUGIN_NAME="tile-zone-$$"
 TMPFILE=$(mktemp /tmp/tile-zone-XXXXXX.js)
@@ -90,13 +55,25 @@ cat > "$TMPFILE" <<JSEOF
     var gap = ${GAP};
     var action = "${ACTION}";
     var targetScreenName = "${TARGET_SCREEN}";
-    var screenDiags = ${SCREEN_DIAGS};
+    var targetWindowId = "${TARGET_WINDOW}";
 
-    var win = workspace.activeWindow;
+    // Prefer resolving the caller-supplied window UUID over whatever is
+    // currently focused — the picker may have taken focus in the meantime.
+    var win = null;
+    if (targetWindowId) {
+        var list = (typeof workspace.windowList === 'function')
+                   ? workspace.windowList() : (workspace.windows || []);
+        for (var i = 0; i < list.length; i++) {
+            if (String(list[i].internalId) === targetWindowId) {
+                win = list[i];
+                break;
+            }
+        }
+    }
+    if (!win) win = workspace.activeWindow;
     if (!win || win.specialWindow) return;
 
-    // screenSize: 'large' (>= 40"), 'medium' (15"-40"), 'small' (< 15")
-    function zonesForArea(area, screenSize) {
+    function zonesForArea(area) {
         var ax = area.x, ay = area.y, W = area.width, H = area.height;
         var usable = W - 2 * gap;
         var rowH = Math.round((H - 3 * gap) / 2);
@@ -107,63 +84,37 @@ cat > "$TMPFILE" <<JSEOF
         var halfW = Math.round((usable - gap) / 2);
         var halfRightX = ax + W - gap - halfW;
 
-        if (screenSize === 'large') {
-            var quarterW = Math.floor((usable - 3 * gap) / 4);
-            var quarter4W = usable - 3 * quarterW - 3 * gap;
-            var q1X = leftX;
-            var q2X = q1X + quarterW + gap;
-            var q3X = q2X + quarterW + gap;
-            var q4X = q3X + quarterW + gap;
+        var quarterW = Math.floor((usable - 3 * gap) / 4);
+        var quarter4W = usable - 3 * quarterW - 3 * gap;
+        var q1X = leftX;
+        var q2X = q1X + quarterW + gap;
+        var q3X = q2X + quarterW + gap;
+        var q4X = q3X + quarterW + gap;
 
-            return [
-                { x: q1X, y: topY, w: quarterW,  h: fullH },  // 0
-                { x: q2X, y: topY, w: quarterW,  h: fullH },  // 1
-                { x: q3X, y: topY, w: quarterW,  h: fullH },  // 2
-                { x: q4X, y: topY, w: quarter4W, h: fullH },  // 3
-                { x: q1X, y: topY, w: quarterW,  h: rowH  },  // 4
-                { x: q2X, y: topY, w: quarterW,  h: rowH  },  // 5
-                { x: q3X, y: topY, w: quarterW,  h: rowH  },  // 6
-                { x: q4X, y: topY, w: quarter4W, h: rowH  },  // 7
-                { x: q1X, y: botY, w: quarterW,  h: rowH  },  // 8
-                { x: q2X, y: botY, w: quarterW,  h: rowH  },  // 9
-                { x: q3X, y: botY, w: quarterW,  h: rowH  },  // 10
-                { x: q4X, y: botY, w: quarter4W, h: rowH  },  // 11
-                { x: leftX,      y: topY, w: halfW, h: fullH },  // 12
-                { x: halfRightX, y: topY, w: halfW, h: fullH },  // 13
-                { x: q2X, y: topY, w: 2 * quarterW + gap, h: fullH },  // 14
-                { x: leftX,      y: topY, w: halfW, h: rowH  },  // 15
-                { x: halfRightX, y: topY, w: halfW, h: rowH  },  // 16
-                { x: leftX,      y: botY, w: halfW, h: rowH  },  // 17
-                { x: halfRightX, y: botY, w: halfW, h: rowH  },  // 18
-                { x: q2X, y: topY, w: 2 * quarterW + gap, h: rowH },  // 19
-                { x: q2X, y: botY, w: 2 * quarterW + gap, h: rowH },  // 20
-                { x: ax, y: ay, w: W, h: H },  // 21: maximize
-            ];
-        } else if (screenSize === 'medium') {
-            var sideW = Math.round(usable * 0.26);
-            var centerW = usable - 2 * sideW - 2 * gap;
-            var rightX = ax + W - gap - sideW;
-            var centerX = leftX + sideW + gap;
-
-            return [
-                { x: leftX,      y: botY, w: sideW,   h: rowH  },  // 0: bottom-left
-                { x: leftX,      y: topY, w: sideW,   h: rowH  },  // 1: top-left
-                { x: leftX,      y: topY, w: sideW,   h: fullH },  // 2: left 26%
-                { x: leftX,      y: topY, w: halfW,   h: fullH },  // 3: left 50%
-                { x: centerX,    y: topY, w: centerW, h: fullH },  // 4: center 48%
-                { x: halfRightX, y: topY, w: halfW,   h: fullH },  // 5: right 50%
-                { x: rightX,     y: topY, w: sideW,   h: fullH },  // 6: right 26%
-                { x: rightX,     y: topY, w: sideW,   h: rowH  },  // 7: top-right
-                { x: rightX,     y: botY, w: sideW,   h: rowH  },  // 8: bottom-right
-                { x: ax, y: ay, w: W, h: H },  // 9: maximize
-            ];
-        } else {
-            return [
-                { x: leftX,      y: topY, w: halfW, h: fullH },  // 0: left 50%
-                { x: halfRightX, y: topY, w: halfW, h: fullH },  // 1: right 50%
-                { x: ax, y: ay, w: W, h: H },  // 2: maximize
-            ];
-        }
+        return [
+            { x: q1X, y: topY, w: quarterW,  h: fullH },  // 0
+            { x: q2X, y: topY, w: quarterW,  h: fullH },  // 1
+            { x: q3X, y: topY, w: quarterW,  h: fullH },  // 2
+            { x: q4X, y: topY, w: quarter4W, h: fullH },  // 3
+            { x: q1X, y: topY, w: quarterW,  h: rowH  },  // 4
+            { x: q2X, y: topY, w: quarterW,  h: rowH  },  // 5
+            { x: q3X, y: topY, w: quarterW,  h: rowH  },  // 6
+            { x: q4X, y: topY, w: quarter4W, h: rowH  },  // 7
+            { x: q1X, y: botY, w: quarterW,  h: rowH  },  // 8
+            { x: q2X, y: botY, w: quarterW,  h: rowH  },  // 9
+            { x: q3X, y: botY, w: quarterW,  h: rowH  },  // 10
+            { x: q4X, y: botY, w: quarter4W, h: rowH  },  // 11
+            { x: leftX,      y: topY, w: halfW, h: fullH },  // 12
+            { x: halfRightX, y: topY, w: halfW, h: fullH },  // 13
+            { x: q2X, y: topY, w: 2 * quarterW + gap, h: fullH },  // 14
+            { x: leftX,      y: topY, w: halfW, h: rowH  },  // 15
+            { x: halfRightX, y: topY, w: halfW, h: rowH  },  // 16
+            { x: leftX,      y: botY, w: halfW, h: rowH  },  // 17
+            { x: halfRightX, y: botY, w: halfW, h: rowH  },  // 18
+            { x: q2X, y: topY, w: 2 * quarterW + gap, h: rowH },  // 19
+            { x: q2X, y: botY, w: 2 * quarterW + gap, h: rowH },  // 20
+            { x: ax, y: ay, w: W, h: H },  // 21: maximize
+        ];
     }
 
     // Detect which zone best matches the window geometry
@@ -208,11 +159,8 @@ cat > "$TMPFILE" <<JSEOF
         }
     }
 
-    function sizeClass(d) { return d >= 40 ? 'large' : d >= 15 ? 'medium' : 'small'; }
-
-    var curSize = sizeClass(screenDiags[tileOutput.name] || 0);
     var curArea = workspace.clientArea(KWin.MaximizeArea, tileOutput, win.desktops[0]);
-    var curZones = zonesForArea(curArea, curSize);
+    var curZones = zonesForArea(curArea);
     var curZone = detectZone(curZones, win.frameGeometry);
 
     var targetZone = curZone;
@@ -222,59 +170,25 @@ cat > "$TMPFILE" <<JSEOF
         var dir = (action === "screen-next") ? 1 : -1;
         var newIdx = (curScreenIdx + dir + screens.length) % screens.length;
         var targetScreen = screens[newIdx];
-        var targetSize = sizeClass(screenDiags[targetScreen.name] || 0);
         var targetArea = workspace.clientArea(KWin.MaximizeArea, targetScreen, win.desktops[0]);
-        targetZones = zonesForArea(targetArea, targetSize);
-        // Keep same zone index on the new screen (clamped)
-        if (targetZone >= targetZones.length)
-            targetZone = 0;
+        targetZones = zonesForArea(targetArea);
     } else if (action === "next") {
         targetZone = (curZone + 1) % curZones.length;
     } else if (action === "prev") {
         targetZone = (curZone - 1 + curZones.length) % curZones.length;
     } else {
-        // Named zone lookup — resolves descriptive names to indices per screen size
         var zoneNames = {
-            large: {
-                'q1-full': 0, 'q2-full': 1, 'q3-full': 2, 'q4-full': 3,
-                'q1-top': 4,  'q2-top': 5,  'q3-top': 6,  'q4-top': 7,
-                'q1-bot': 8,  'q2-bot': 9,  'q3-bot': 10, 'q4-bot': 11,
-                'left-full': 12,   'right-full': 13,   'center-full': 14,
-                'left-top': 15,    'right-top': 16,
-                'left-bot': 17,    'right-bot': 18,
-                'center-top': 19,  'center-bot': 20,
-                'maximize': 21,
-            },
-            medium: {
-                'left-col-bot': 0,  'left-col-top': 1,  'left-col-full': 2,
-                'left-full': 3,     'center-full': 4,    'right-full': 5,
-                'right-col-full': 6,'right-col-top': 7,  'right-col-bot': 8,
-                'maximize': 9,
-                // Fallbacks: large-screen zone names degrade to closest medium zone
-                'q1-full': 2, 'q1-top': 1, 'q1-bot': 0,
-                'q2-full': 3, 'q2-top': 3, 'q2-bot': 3,
-                'q3-full': 5, 'q3-top': 5, 'q3-bot': 5,
-                'q4-full': 6, 'q4-top': 7, 'q4-bot': 8,
-                'left-top': 3,  'left-bot': 3,
-                'right-top': 5, 'right-bot': 5,
-                'center-top': 4, 'center-bot': 4,
-            },
-            small: {
-                'left-full': 0, 'right-full': 1, 'maximize': 2,
-                // Fallbacks: all zone names degrade to left/right/maximize
-                'q1-full': 0, 'q2-full': 0, 'q3-full': 1, 'q4-full': 1,
-                'q1-top': 0,  'q2-top': 0,  'q3-top': 1,  'q4-top': 1,
-                'q1-bot': 0,  'q2-bot': 0,  'q3-bot': 1,  'q4-bot': 1,
-                'left-top': 0,  'left-bot': 0,
-                'right-top': 1, 'right-bot': 1,
-                'center-full': 2, 'center-top': 2, 'center-bot': 2,
-                'left-col-full': 0, 'left-col-top': 0, 'left-col-bot': 0,
-                'right-col-full': 1, 'right-col-top': 1, 'right-col-bot': 1,
-            },
+            'q1-full': 0, 'q2-full': 1, 'q3-full': 2, 'q4-full': 3,
+            'q1-top': 4,  'q2-top': 5,  'q3-top': 6,  'q4-top': 7,
+            'q1-bot': 8,  'q2-bot': 9,  'q3-bot': 10, 'q4-bot': 11,
+            'left-full': 12,   'right-full': 13,   'center-full': 14,
+            'left-top': 15,    'right-top': 16,
+            'left-bot': 17,    'right-bot': 18,
+            'center-top': 19,  'center-bot': 20,
+            'maximize': 21,
         };
-        var names = zoneNames[curSize] || {};
-        if (action in names) {
-            targetZone = names[action];
+        if (action in zoneNames) {
+            targetZone = zoneNames[action];
         } else {
             targetZone = parseInt(action);
             if (isNaN(targetZone) || targetZone < 0 || targetZone >= curZones.length) return;

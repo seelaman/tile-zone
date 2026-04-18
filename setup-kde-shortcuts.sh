@@ -22,9 +22,9 @@ SHORTCUTS=(
     # Picker
     "tile-zone: Picker|$TILE_ZONE_PICKER|Meta+Z"
 
-    # Vi navigation — edges and center
-    "tile-zone: Left full (H)|$TILE_ZONE_SH q1-full|Meta+H"
-    "tile-zone: Right full (L)|$TILE_ZONE_SH q4-full|Meta+L"
+    # Vi navigation — half-width zones + center
+    "tile-zone: Left-50 full (H)|$TILE_ZONE_SH left-full|Meta+H"
+    "tile-zone: Right-50 full (L)|$TILE_ZONE_SH right-full|Meta+L"
     "tile-zone: Center top (K)|$TILE_ZONE_SH center-top|Meta+K"
     "tile-zone: Center bottom (J)|$TILE_ZONE_SH center-bot|Meta+J"
     "tile-zone: Center full (G)|$TILE_ZONE_SH center-full|Meta+G"
@@ -40,11 +40,11 @@ SHORTCUTS=(
     "tile-zone: Right-50 top (I)|$TILE_ZONE_SH right-top|Meta+I"
     "tile-zone: Q4 top (O)|$TILE_ZONE_SH q4-top|Meta+O"
 
-    # Full height
-    "tile-zone: Left-50 full (A)|$TILE_ZONE_SH left-full|Meta+A"
+    # Full-height quarters (home row)
+    "tile-zone: Q1 full (A)|$TILE_ZONE_SH q1-full|Meta+A"
     "tile-zone: Q2 full (S)|$TILE_ZONE_SH q2-full|Meta+S"
     "tile-zone: Q3 full (D)|$TILE_ZONE_SH q3-full|Meta+D"
-    "tile-zone: Right-50 full (F)|$TILE_ZONE_SH right-full|Meta+F"
+    "tile-zone: Q4 full (F)|$TILE_ZONE_SH q4-full|Meta+F"
 
     # Bottom half — left hand
     "tile-zone: Q1 bottom (X)|$TILE_ZONE_SH q1-bot|Meta+X"
