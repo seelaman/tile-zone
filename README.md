@@ -92,6 +92,7 @@ Example using [kanata](https://github.com/jtroo/kanata) with cross-hand layers â
 ```lisp
 ;; Right meta layer (hold ; with right hand, type left-hand keys):
 ;;   Q W E R = q1..q4 top, A S D F = q1..q4 full, Z X C V = q1..q4 bottom
+;;   G = center-full, T = left-top, B = left-bot
 (deflayermap (rmeta_layer)
   q (cmd bash -c "$HOME/bin/tile-zone.sh q1-top")
   w (cmd bash -c "$HOME/bin/tile-zone.sh q2-top")
@@ -106,21 +107,25 @@ Example using [kanata](https://github.com/jtroo/kanata) with cross-hand layers â
   x (cmd bash -c "$HOME/bin/tile-zone.sh q2-bot")
   c (cmd bash -c "$HOME/bin/tile-zone.sh q3-bot")
   v (cmd bash -c "$HOME/bin/tile-zone.sh q4-bot")
+  t (cmd bash -c "$HOME/bin/tile-zone.sh left-top")     ;; left half, top
+  b (cmd bash -c "$HOME/bin/tile-zone.sh left-bot")     ;; left half, bottom
 )
 
 ;; Left meta layer (hold A with left hand, type right-hand keys):
-;;   vi HJKL navigation + picker + maximize
+;;   vi HJKL navigation + I/, half-height halves + picker + maximize
 (deflayermap (lmeta_layer)
   h (cmd bash -c "$HOME/bin/tile-zone.sh left-full")    ;; vi left
   j (cmd bash -c "$HOME/bin/tile-zone.sh center-bot")   ;; vi down
   k (cmd bash -c "$HOME/bin/tile-zone.sh center-top")   ;; vi up
   l (cmd bash -c "$HOME/bin/tile-zone.sh right-full")   ;; vi right
+  i (cmd bash -c "$HOME/bin/tile-zone.sh right-top")    ;; right half, top
+  , (cmd bash -c "$HOME/bin/tile-zone.sh right-bot")    ;; right half, bottom
   o (cmd bash -c "$HOME/bin/tile-zone-picker")          ;; visual picker
   m (cmd bash -c "$HOME/bin/tile-zone.sh maximize")
 )
 ```
 
-The four half-width Ã— half-height zones (`left-top`, `right-top`, `left-bot`, `right-bot`) aren't bound to dedicated shortcuts â€” they're reachable via the picker (keys `T`, `I`, `B`, `,`).
+All 22 zones have a dedicated chord. Each layer only maps keys for the *opposite* hand, so the four half-width, half-height zones split across the two layers: `T` (left-top) and `B` (left-bot) are left-hand keys and live in the right-meta layer, while `I` (right-top) and `,` (right-bot) are right-hand keys and live in the left-meta layer. Either way the letter matches the picker label.
 
 Available zone names for `tile-zone.sh`:
 
@@ -135,7 +140,7 @@ Available zone names for `tile-zone.sh`:
 If you don't use kanata, run the included setup script to register Meta+key shortcuts directly in KDE:
 
 ```bash
-./setup-kde-shortcuts.sh          # install all shortcuts (Meta+A/S/D/F, Meta+Q/W/E/R, Meta+Z/X/C/V, Meta+H/J/K/L/...)
+./setup-kde-shortcuts.sh          # install all 22 shortcuts (Meta+A/S/D/F, Meta+Q/W/E/R, Meta+Z/X/C/V, Meta+H/J/K/L/G/M, Meta+T/B/I/,)
 ./setup-kde-shortcuts.sh --remove # remove them
 ```
 

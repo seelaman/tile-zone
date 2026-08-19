@@ -30,6 +30,12 @@ SHORTCUTS=(
     "tile-zone: Center full (G)|$TILE_ZONE_SH center-full|Meta+G"
     "tile-zone: Maximize (M)|$TILE_ZONE_SH maximize|Meta+M"
 
+    # Half-width, half-height halves
+    "tile-zone: Left-50 top (T)|$TILE_ZONE_SH left-top|Meta+T"
+    "tile-zone: Left-50 bottom (B)|$TILE_ZONE_SH left-bot|Meta+B"
+    "tile-zone: Right-50 top (I)|$TILE_ZONE_SH right-top|Meta+I"
+    "tile-zone: Right-50 bottom (,)|$TILE_ZONE_SH right-bot|Meta+,"
+
     # Top-half quarters (top row, left hand)
     "tile-zone: Q1 top (Q)|$TILE_ZONE_SH q1-top|Meta+Q"
     "tile-zone: Q2 top (W)|$TILE_ZONE_SH q2-top|Meta+W"
