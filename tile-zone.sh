@@ -199,6 +199,13 @@ cat > "$TMPFILE" <<JSEOF
     // Clear any KDE tile so geometry can be set freely
     if (win.tile) win.tile = null;
     win.frameGeometry = {x: tg.x, y: tg.y, width: tg.w, height: tg.h};
+
+    // Keep the window focused. Moving geometry onto another output does not
+    // carry activation with it — KWin hands focus to whatever is next in the
+    // focus chain on that output (and the picker's closing overlay makes that
+    // worse). Re-assert it explicitly.
+    workspace.raiseWindow(win);
+    workspace.activeWindow = win;
 })();
 JSEOF
 

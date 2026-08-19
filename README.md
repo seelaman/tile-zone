@@ -36,7 +36,7 @@ The picker shows overlays on all connected screens simultaneously:
 - **Other screens** are dimmed with a number badge — press `1`-`9` to switch
 - **Mouse hover** on any screen auto-activates it and highlights the nearest zone
 - **Click** to tile, or type the zone letter on the keyboard
-- When tiling to a different screen, the window moves there automatically
+- When tiling to a different screen, the window moves there automatically and keeps keyboard focus
 
 ### Visual cues
 
